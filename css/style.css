@@ -1,33 +1,21 @@
-/* ============================================================
-   Wedding Hidden Letter - style.css (v2)
-   テーマカラー変更 → :root の CSS 変数を編集
-   ============================================================ */
-
 :root {
-  --bg: #faf5ef;
+  --bg: #faf6f0;
   --card: #ffffff;
-  --text: #4a3728;
-  --text-light: #8b7355;
-  --accent: #d4a574;
-  --accent-dark: #b8834a;
-  --env: #e8d5b7;
-  --env-dark: #c4a882;
-  --env-flap: #d9c4a5;
-  --env-inner: #f5ece0;
-  --wax: #c0392b;
-  --wax-hi: #e74c3c;
-  --hidden-bg: #fef9f0;
-  --serif: "Noto Serif JP", "Hiragino Mincho ProN", serif;
+  --text: #3d3028;
+  --text-light: #9a8a78;
+  --accent: #c9a87c;
+  --serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
   --cursive: "Klee One", "Noto Serif JP", serif;
-  --shadow: 0 4px 24px rgba(74, 55, 40, 0.08);
-  --shadow-up: 0 8px 32px rgba(74, 55, 40, 0.15);
-  --r: 16px;
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
 
 body {
   font-family: var(--serif);
@@ -35,548 +23,135 @@ body {
   color: var(--text);
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ============================================================
-   ENVELOPE
-   ============================================================ */
-
-.envelope-screen {
-  position: fixed; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg);
-  z-index: 1000;
-  transition: opacity 0.8s ease 0.2s, visibility 0.8s ease 0.2s;
-}
-.envelope-screen.opened {
-  opacity: 0; visibility: hidden; pointer-events: none;
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 0 20px;
 }
 
-.envelope-wrapper {
-  display: flex; flex-direction: column; align-items: center;
+/* ---- Letter ---- */
+
+.letter {
+  padding: 64px 0 48px;
+  opacity: 0;
+  animation: fadeIn 1.2s ease 0.3s forwards;
 }
 
-.envelope {
-  position: relative;
-  width: 280px; height: 200px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.envelope-back {
-  position: absolute; inset: 0;
-  background: var(--env);
-  border-radius: 4px 4px 12px 12px;
-  box-shadow: var(--shadow-up);
-}
-
-.envelope-front {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
-  background: var(--env);
-  border-radius: 0 0 12px 12px;
-  z-index: 2;
-  clip-path: polygon(0 40%, 50% 0, 100% 40%, 100% 100%, 0 100%);
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
-}
-
-.envelope-letter-peek {
-  position: absolute;
-  top: 15%; left: 10%; right: 10%; bottom: 30%;
-  background: #fff;
-  border-radius: 4px;
-  z-index: 1;
-  transition: transform 1s var(--ease);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-.envelope-letter-peek::after {
-  content: "";
-  position: absolute; top: 20%; left: 15%; right: 15%;
-  height: 3px;
-  background: repeating-linear-gradient(
-    90deg, var(--accent) 0, var(--accent) 20px, transparent 20px, transparent 28px
-  );
-  opacity: 0.3;
-}
-
-.envelope.letter-rising .envelope-letter-peek {
-  transform: translateY(-120%);
-}
-
-.envelope-flap {
-  position: absolute; top: 0; left: 0; right: 0; height: 55%;
-  background: var(--env-flap);
-  transform-origin: top center;
-  transition: transform 0.7s var(--ease);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  z-index: 3;
-}
-.envelope.opening .envelope-flap {
-  transform: rotateX(180deg);
-}
-
-.wax-seal {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 58px; height: 58px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--wax-hi), var(--wax) 60%);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.35), inset 0 -2px 4px rgba(0,0,0,0.2);
-  z-index: 4;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 0.3s ease;
-}
-.wax-seal::after {
-  content: "💌"; font-size: 1.6rem;
-}
-.envelope:active .wax-seal {
-  transform: translate(-50%, -50%) scale(0.92);
-}
-.envelope.opening .wax-seal {
-  animation: sealBreak 0.5s 0.15s forwards;
-}
-
-.envelope-hint {
-  margin-top: 28px;
-  font-size: 0.9rem;
-  color: var(--text-light);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* ============================================================
-   LETTER
-   ============================================================ */
-
-.letter-container {
-  opacity: 0; transform: translateY(40px);
-  transition: opacity 1s ease 0.2s, transform 1s ease 0.2s;
-  padding: 20px 16px 160px;
-  max-width: 480px; margin: 0 auto;
-}
-.letter-container.visible {
-  opacity: 1; transform: translateY(0);
-}
-
-.letter-header {
-  text-align: center; padding: 28px 0 12px;
-}
-
-.header-emoji {
-  font-size: 2.2rem;
-  display: inline-block;
-  cursor: pointer;
-  transition: transform 0.2s var(--pop);
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-.header-emoji.rainbow {
-  animation: rainbowSpin 1s ease forwards;
-}
-
-.letter-header h1 {
+.letter-to {
   font-family: var(--cursive);
-  font-size: 1.7rem; font-weight: 400;
+  font-size: 1.5rem;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: 0.06em;
+  margin-bottom: 40px;
   color: var(--text);
-  letter-spacing: 0.04em;
-  margin-top: 4px;
-}
-
-.letter-date {
-  font-size: 0.82rem;
-  color: var(--text-light);
-  margin-top: 6px;
 }
 
 .letter-body {
-  background: var(--card);
-  border-radius: var(--r);
-  box-shadow: var(--shadow);
-  padding: 32px 24px;
-  margin: 16px 0;
-  position: relative;
-  overflow: hidden;
-}
-.letter-body::before {
-  content: "";
-  position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px;
-  border: 1px solid rgba(212,165,116,0.15);
-  border-radius: 10px;
-  pointer-events: none;
-}
-.letter-body::after {
-  content: "";
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.4;
+  font-family: var(--cursive);
+  font-size: 1rem;
+  line-height: 2.2;
+  white-space: pre-line;
+  letter-spacing: 0.02em;
 }
 
-.letter-text {
+.letter-from {
   font-family: var(--cursive);
-  font-size: 1.05rem; line-height: 2.1;
-  white-space: pre-line;
+  font-size: 1rem;
+  text-align: right;
+  margin-top: 40px;
+  color: var(--text-light);
 }
-.letter-text.typing::after {
-  content: "▍";
-  animation: blink 0.6s infinite;
+
+/* ---- Divider ---- */
+
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 48px 0;
+  opacity: 0;
+  animation: fadeIn 0.8s ease 1.8s forwards;
+}
+
+.divider-line {
+  width: 40px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+.divider-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+/* ---- Secret box ---- */
+
+.secret-box {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 20px rgba(60, 48, 40, 0.06);
+  margin-bottom: 80px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 1.2s ease, transform 1.2s ease;
+}
+
+.secret-box.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.secret-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--accent);
+  text-align: center;
+  margin-bottom: 16px;
 }
 
-.letter-signature {
-  text-align: right; margin-top: 28px;
+.secret-text {
   font-family: var(--cursive);
-  font-size: 1.1rem;
-  color: var(--accent-dark);
-  cursor: default;
-  user-select: none; -webkit-user-select: none;
-  position: relative;
-  transition: transform 0.3s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.letter-signature.pressing {
-  transform: scale(0.95);
-}
-
-/* ============================================================
-   SECRET WORD
-   ============================================================ */
-
-.secret-word {
-  color: var(--accent-dark);
-  cursor: pointer;
-  position: relative;
-  background: linear-gradient(transparent 65%, rgba(212,165,116,0.2) 65%);
-  transition: all 0.3s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.secret-word:hover, .secret-word:active {
-  background: linear-gradient(transparent 65%, rgba(212,165,116,0.4) 65%);
-}
-.secret-word.found {
-  background: linear-gradient(transparent 65%, rgba(212,165,116,0.35) 65%);
-}
-
-/* ============================================================
-   HIDDEN BUTTONS
-   ============================================================ */
-
-.hidden-section { margin-top: 20px; }
-.hidden-item { margin-bottom: 10px; }
-
-.hidden-btn {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%;
-  background: var(--card);
-  border: 1.5px solid rgba(212,165,116,0.3);
-  padding: 14px 18px;
-  border-radius: var(--r);
-  font-family: var(--serif); font-size: 0.95rem;
+  font-size: 0.95rem;
+  line-height: 2;
+  text-align: center;
+  white-space: pre-line;
   color: var(--text);
-  cursor: pointer;
-  transition: all 0.25s var(--ease);
-  -webkit-tap-highlight-color: transparent;
-  position: relative; overflow: hidden;
-  box-shadow: 0 2px 8px rgba(74,55,40,0.04);
-}
-.hidden-btn:active { transform: scale(0.97); }
-.hidden-btn .btn-emoji { font-size: 1.3rem; flex-shrink: 0; }
-.hidden-btn .btn-label { flex: 1; text-align: left; }
-.hidden-btn .btn-arrow {
-  font-size: 1.2rem; color: var(--text-light);
-  transition: transform 0.3s ease;
 }
 
-.hidden-btn.discovered {
-  border-color: var(--accent-dark);
-  background: var(--hidden-bg);
-}
-.hidden-btn.hint-glow {
-  animation: hintGlow 2s ease-in-out infinite;
-}
+/* ---- Error ---- */
 
-.hidden-reveal {
-  max-height: 0; overflow: hidden; opacity: 0;
-  transition: max-height 0.5s var(--ease), opacity 0.4s ease, margin 0.4s ease;
-  margin-top: 0;
-}
-.hidden-reveal.show {
-  max-height: 500px; opacity: 1; margin-top: 8px;
-}
-
-.hidden-card {
-  background: var(--hidden-bg);
-  border-radius: var(--r);
-  padding: 24px;
-  box-shadow: var(--shadow);
-  animation: cardSlide 0.4s var(--pop);
-}
-.hidden-card .card-emoji { font-size: 2.5rem; text-align: center; margin-bottom: 10px; }
-.hidden-card .card-title {
-  font-size: 0.82rem; color: var(--text-light);
-  text-align: center; margin-bottom: 8px;
-  text-transform: uppercase; letter-spacing: 0.1em;
-}
-.hidden-card .card-text {
-  font-family: var(--cursive);
-  font-size: 1rem; line-height: 1.9;
-  text-align: center; white-space: pre-line;
-}
-
-/* ============================================================
-   MODAL (shared popup)
-   ============================================================ */
-
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.35);
-  z-index: 500;
-  opacity: 0; visibility: hidden;
-  transition: all 0.3s ease;
-}
-.modal-overlay.show { opacity: 1; visibility: visible; }
-
-.modal-box {
-  position: fixed; top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(0.85);
-  background: var(--card);
-  border-radius: 20px;
-  padding: 28px 32px;
-  box-shadow: var(--shadow-up);
-  z-index: 501;
-  opacity: 0; visibility: hidden;
-  transition: all 0.35s var(--pop);
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
   text-align: center;
-  max-width: 320px; width: 85%;
-}
-.modal-box.show {
-  opacity: 1; visibility: visible;
-  transform: translate(-50%, -50%) scale(1);
-}
-.modal-emoji { font-size: 2.2rem; margin-bottom: 10px; }
-.modal-text {
-  font-family: var(--cursive);
-  font-size: 1rem; line-height: 1.9;
-  white-space: pre-line;
+  gap: 12px;
 }
 
-/* ============================================================
-   SCROLL SECRET
-   ============================================================ */
-
-.scroll-gap { height: 100px; }
-
-.scroll-secret {
-  padding: 40px 24px 60px;
-  text-align: center;
-  opacity: 0; transform: translateY(20px);
-  transition: all 0.8s ease;
-}
-.scroll-secret.revealed { opacity: 1; transform: translateY(0); }
-
-.scroll-secret-divider {
-  width: 50px; height: 2px;
-  background: var(--accent); opacity: 0.6;
-  margin: 0 auto 20px; border-radius: 1px;
-}
-.scroll-secret-text {
-  font-family: var(--cursive);
-  font-size: 0.92rem; line-height: 2.1;
+.error-text {
+  font-size: 0.9rem;
   color: var(--text-light);
-  white-space: pre-line;
+  line-height: 1.8;
 }
 
-/* ============================================================
-   ALL-FOUND BANNER
-   ============================================================ */
+/* ---- Keyframes ---- */
 
-.all-found-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.45);
-  z-index: 1999;
-  opacity: 0; visibility: hidden;
-  transition: all 0.4s ease;
-}
-.all-found-overlay.show { opacity: 1; visibility: visible; }
-
-.all-found-banner {
-  position: fixed; top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  background: var(--card);
-  border-radius: 24px;
-  padding: 40px 28px;
-  box-shadow: 0 20px 60px rgba(74,55,40,0.3);
-  z-index: 2000;
-  text-align: center;
-  max-width: 340px; width: 88%;
-  transition: transform 0.5s var(--pop);
-}
-.all-found-banner.show {
-  transform: translate(-50%, -50%) scale(1);
-}
-.all-found-banner .banner-emoji { font-size: 3rem; margin-bottom: 14px; }
-.all-found-banner .banner-text {
-  font-family: var(--cursive);
-  font-size: 1.05rem; line-height: 2; white-space: pre-line;
-}
-.all-found-banner .banner-close {
-  display: inline-block; margin-top: 20px;
-  padding: 10px 32px;
-  border: 2px solid var(--accent);
-  border-radius: 24px;
-  background: none;
-  font-family: var(--serif); font-size: 0.9rem;
-  color: var(--text); cursor: pointer;
-  transition: all 0.25s ease;
-}
-.all-found-banner .banner-close:active {
-  background: var(--accent); color: #fff;
-}
-
-/* ============================================================
-   DISCOVERY COUNTER
-   ============================================================ */
-
-.discovery-counter {
-  position: fixed; bottom: 20px; right: 16px;
-  background: var(--card);
-  border-radius: 20px;
-  padding: 8px 14px;
-  box-shadow: var(--shadow);
-  z-index: 100;
-  opacity: 0; transform: translateY(10px);
-  transition: all 0.4s var(--ease);
-  display: flex; align-items: center; gap: 8px;
-}
-.discovery-counter.visible { opacity: 1; transform: translateY(0); }
-
-.counter-bar {
-  width: 40px; height: 4px;
-  background: rgba(212,165,116,0.2);
-  border-radius: 2px; overflow: hidden;
-}
-.counter-fill {
-  height: 100%; width: 0;
-  background: var(--accent-dark);
-  border-radius: 2px;
-  transition: width 0.5s var(--ease);
-}
-.counter-label {
-  font-size: 0.75rem; color: var(--text-light); white-space: nowrap;
-}
-
-/* ============================================================
-   TOAST
-   ============================================================ */
-
-.toast {
-  position: fixed; bottom: 70px; left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--text);
-  color: #fff;
-  padding: 12px 24px;
-  border-radius: 24px;
-  font-size: 0.85rem;
-  opacity: 0; z-index: 200;
-  pointer-events: none;
-  transition: all 0.4s var(--ease);
-  white-space: nowrap;
-  max-width: 90vw;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.toast.show {
-  opacity: 1; transform: translateX(-50%) translateY(0);
-}
-
-/* ============================================================
-   DEMO BUTTON
-   ============================================================ */
-
-.demo-btn {
-  margin-top: 24px;
-  padding: 10px 28px;
-  border: 1.5px solid var(--accent);
-  border-radius: 24px;
-  background: none;
-  font-family: var(--serif); font-size: 0.9rem;
-  color: var(--text-light);
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-.demo-btn:active {
-  background: var(--accent); color: #fff;
-}
-
-/* ============================================================
-   EFFECTS CANVAS
-   ============================================================ */
-
-.effects-canvas {
-  position: fixed; inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-}
-
-/* ============================================================
-   ERROR
-   ============================================================ */
-
-.error-screen {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px; text-align: center;
-}
-.error-screen .error-emoji { font-size: 3rem; margin-bottom: 16px; }
-.error-screen .error-text {
-  font-size: 1rem; color: var(--text-light); line-height: 1.8;
-}
-
-/* ============================================================
-   KEYFRAMES
-   ============================================================ */
-
-@keyframes sealBreak {
-  0%   { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
-  40%  { transform: translate(-50%, -50%) scale(1.4) rotate(10deg); opacity: 0.7; }
-  100% { transform: translate(-50%, -50%) scale(0) rotate(30deg); opacity: 0; }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-@keyframes cardSlide {
-  from { transform: translateY(12px) scale(0.95); opacity: 0; }
-  to   { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-@keyframes hintGlow {
-  0%, 100% { box-shadow: 0 2px 8px rgba(74,55,40,0.04); }
-  50% { box-shadow: 0 2px 16px rgba(212,165,116,0.35); }
-}
-
-@keyframes rainbowSpin {
-  0%   { transform: scale(1) rotate(0); }
-  50%  { transform: scale(1.5) rotate(180deg); }
-  100% { transform: scale(1.2) rotate(360deg); }
-}
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-
-@media (max-width: 380px) {
-  .letter-body { padding: 24px 16px; }
-  .letter-header h1 { font-size: 1.4rem; }
-  .envelope { width: 240px; height: 170px; }
-  .wax-seal { width: 48px; height: 48px; }
-}
-
-@media (min-width: 600px) {
-  .letter-container { padding: 32px 24px 120px; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
