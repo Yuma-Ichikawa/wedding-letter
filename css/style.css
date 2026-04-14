@@ -4,6 +4,7 @@
   --text: #3d3028;
   --text-light: #9a8a78;
   --accent: #c9a87c;
+  --red: #c0392b;
   --serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
   --cursive: "Klee One", "Noto Serif JP", serif;
 }
@@ -92,6 +93,7 @@ body {
   box-shadow: 0 2px 24px rgba(60, 48, 40, 0.07);
   text-align: center;
   overflow: hidden;
+  position: relative;
   opacity: 0;
   transform: translateY(16px);
   transition: opacity 0.8s ease, transform 0.8s ease;
@@ -101,24 +103,127 @@ body {
   transform: translateY(0);
 }
 
-/* mystery prompt */
-.mystery {
-  font-size: 2.4rem;
-  color: var(--accent);
-  animation: pulse 1s ease-in-out infinite;
-  user-select: none;
-  line-height: 1;
-  padding: 16px 0;
+/* ---- Omikuji box ---- */
+
+.omikuji-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 12px 0 8px;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.omikuji-box.done {
+  opacity: 0;
+  transform: scale(0.8);
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity 0.4s ease, transform 0.4s ease, height 0.4s ease 0.2s, padding 0.4s ease 0.2s;
 }
 
-/* photo frame (polaroid style) */
+.omikuji-label {
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.omikuji-stick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(0);
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.omikuji-stick.pulling {
+  animation: stickWiggle 0.6s ease;
+}
+.omikuji-stick.out {
+  transform: translateY(-30px);
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.3s ease 0.1s;
+}
+
+.stick-body {
+  width: 6px;
+  height: 56px;
+  background: linear-gradient(to bottom, #e8d5b7, #d4b896);
+  border-radius: 3px;
+}
+
+.stick-tip {
+  width: 14px;
+  height: 14px;
+  background: var(--red);
+  border-radius: 50%;
+  margin-top: -2px;
+  box-shadow: 0 2px 6px rgba(192, 57, 43, 0.3);
+}
+
+/* ---- Rank reveal ---- */
+
+.rank-reveal {
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+  transition: opacity 0.01s, height 0.4s ease;
+}
+.rank-reveal.visible {
+  opacity: 1;
+  height: auto;
+  padding: 8px 0 16px;
+}
+
+.rank-text {
+  font-family: var(--serif);
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 0.15em;
+  opacity: 0;
+  transform: scale(3) rotate(-8deg);
+  text-shadow: 0 2px 12px rgba(192, 57, 43, 0.2);
+}
+.rank-text.stamp {
+  animation: stampIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.rank-text.daikichi {
+  font-size: 3.6rem;
+}
+
+/* ---- Confetti ---- */
+
+.confetti-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+}
+.confetti-layer.visible { opacity: 1; }
+
+.confetti-piece {
+  position: absolute;
+  top: 30%;
+  opacity: 0;
+  animation: confettiFall var(--d, 1s) ease-out forwards;
+}
+
+/* ---- Photo frame (polaroid) ---- */
+
 .photo-frame {
   display: inline-block;
   background: #fff;
   padding: 8px 8px 28px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   opacity: 0;
   transform: scale(0) rotate(-8deg);
+  margin-top: 8px;
 }
 .photo-frame.pop {
   animation: photoPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -132,16 +237,24 @@ body {
   border-radius: 2px;
 }
 
+/* ---- Caption ---- */
+
 .photo-caption {
   font-family: var(--cursive);
-  font-size: 0.78rem;
-  color: var(--text-light);
-  margin-top: 8px;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--text);
+  margin-top: 16px;
   letter-spacing: 0.04em;
+  line-height: 1.6;
   opacity: 0;
-  transition: opacity 0.6s ease;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
 }
-.photo-caption.visible { opacity: 1; }
+.photo-caption.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 /* ---- Secret message ---- */
 
@@ -195,7 +308,7 @@ body {
   line-height: 1.8;
 }
 
-/* ---- Keyframes ---- */
+/* ===================== Keyframes ===================== */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -207,6 +320,36 @@ body {
   50%      { transform: scale(1.15); opacity: 1; }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%  { transform: translateX(-6px) rotate(-1.5deg); }
+  20%  { transform: translateX(6px) rotate(1.5deg); }
+  30%  { transform: translateX(-5px) rotate(-1deg); }
+  40%  { transform: translateX(5px) rotate(1deg); }
+  50%  { transform: translateX(-4px) rotate(-0.5deg); }
+  60%  { transform: translateX(4px) rotate(0.5deg); }
+  70%  { transform: translateX(-2px); }
+  80%  { transform: translateX(2px); }
+  90%  { transform: translateX(-1px); }
+}
+
+@keyframes stickWiggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  15% { transform: translateY(-4px) rotate(-2deg); }
+  30% { transform: translateY(-2px) rotate(2deg); }
+  45% { transform: translateY(-6px) rotate(-1deg); }
+  60% { transform: translateY(-3px) rotate(1deg); }
+  75% { transform: translateY(-8px) rotate(-0.5deg); }
+  90% { transform: translateY(-4px) rotate(0); }
+}
+
+@keyframes stampIn {
+  0%   { opacity: 0; transform: scale(3) rotate(-8deg); }
+  50%  { opacity: 1; transform: scale(0.9) rotate(2deg); }
+  70%  { transform: scale(1.05) rotate(-1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
 @keyframes photoPop {
   0%   { opacity: 0; transform: scale(0) rotate(-12deg); }
   60%  { opacity: 1; transform: scale(1.08) rotate(var(--tilt, 3deg)); }
@@ -214,12 +357,13 @@ body {
   100% { opacity: 1; transform: scale(1) rotate(var(--tilt, 3deg)); }
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  15%  { transform: translateX(-6px) rotate(-1deg); }
-  30%  { transform: translateX(5px) rotate(1deg); }
-  45%  { transform: translateX(-4px) rotate(-0.5deg); }
-  60%  { transform: translateX(3px) rotate(0.5deg); }
-  75%  { transform: translateX(-2px); }
-  90%  { transform: translateX(1px); }
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(180px) translateX(var(--x, 20px)) rotate(var(--r, 360deg));
+  }
 }

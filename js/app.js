@@ -1,19 +1,9 @@
 (() => {
-  const PHOTOS = ["assets/images/1.jpg", "assets/images/2.jpg", "assets/images/3.jpg"];
-  const CAPTIONS = [
-    "この顔よ。",
-    "完全に本気。",
-    "プロ志望だったらしい。",
-    "フォームだけは一流。",
-    "甲子園は遠かった。",
-    "眼光が鋭すぎる。",
+  const FORTUNES = [
+    { img: "assets/images/1.jpg", rank: "大吉", caption: "スマホの背景画像にしてね！" },
+    { img: "assets/images/2.jpg", rank: "吉",   caption: "MAX145キロ（仮）" },
+    { img: "assets/images/3.jpg", rank: "中吉", caption: "体が大きいだけで戦えた" },
   ];
-
-  const DELAY_BOX    = 3000;
-  const DELAY_SHAKE  = 1200;
-  const DELAY_PHOTO  = 800;
-  const DELAY_CAP    = 600;
-  const DELAY_SECRET = 1400;
 
   /* ---- decode ---- */
 
@@ -38,11 +28,34 @@
     return d.innerHTML;
   }
 
+  /* ---- confetti ---- */
+
+  function spawnConfetti(container) {
+    const colors = ["#c9a87c", "#e8d5b7", "#f0c674", "#e88b72", "#8cc5b2", "#f5a0b8"];
+    const count = 40;
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement("div");
+      el.className = "confetti-piece";
+      el.style.setProperty("--x", (Math.random() * 200 - 100).toFixed(0) + "px");
+      el.style.setProperty("--r", (Math.random() * 720 - 360).toFixed(0) + "deg");
+      el.style.setProperty("--d", (Math.random() * 0.5 + 0.6).toFixed(2) + "s");
+      el.style.left = (50 + (Math.random() * 30 - 15)).toFixed(0) + "%";
+      el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      if (Math.random() > 0.5) {
+        el.style.borderRadius = "50%";
+        el.style.width = el.style.height = (Math.random() * 6 + 4) + "px";
+      } else {
+        el.style.width = (Math.random() * 8 + 4) + "px";
+        el.style.height = (Math.random() * 4 + 3) + "px";
+      }
+      container.appendChild(el);
+    }
+  }
+
   /* ---- render ---- */
 
   function render(d) {
-    const photo = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
-    const caption = CAPTIONS[Math.floor(Math.random() * CAPTIONS.length)];
+    const fortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
     const tilt = (Math.random() * 6 - 3).toFixed(1);
 
     document.getElementById("app").innerHTML = [
@@ -59,11 +72,26 @@
       `</div>`,
 
       `<div class="surprise-box" id="surpriseBox">`,
-        `<div class="mystery" id="mystery">？</div>`,
-        `<div class="photo-frame" id="photoFrame" style="--tilt:${tilt}deg">`,
-          `<img src="${photo}" alt="" loading="eager">`,
+
+        `<div class="omikuji-box" id="omikujiBox">`,
+          `<div class="omikuji-label">おみくじ</div>`,
+          `<div class="omikuji-stick" id="omikujiStick">`,
+            `<div class="stick-body"></div>`,
+            `<div class="stick-tip"></div>`,
+          `</div>`,
         `</div>`,
-        `<div class="photo-caption" id="caption">${esc(caption)}</div>`,
+
+        `<div class="rank-reveal" id="rankReveal">`,
+          `<div class="rank-text" id="rankText">${esc(fortune.rank)}</div>`,
+        `</div>`,
+
+        `<div class="confetti-layer" id="confettiLayer"></div>`,
+
+        `<div class="photo-frame" id="photoFrame" style="--tilt:${tilt}deg">`,
+          `<img src="${fortune.img}" alt="" loading="eager">`,
+        `</div>`,
+        `<div class="photo-caption" id="caption">${esc(fortune.caption)}</div>`,
+
         d.secret
           ? `<div class="secret-box" id="secretBox">` +
               `<div class="secret-label">secret message</div>` +
@@ -75,48 +103,81 @@
       `<div class="footer-space"></div>`,
     ].join("");
 
-    runSequence();
+    runSequence(fortune);
   }
 
   /* ---- animation sequence ---- */
 
-  function runSequence() {
-    const divider    = document.getElementById("divider");
-    const box        = document.getElementById("surpriseBox");
-    const mystery    = document.getElementById("mystery");
-    const frame      = document.getElementById("photoFrame");
-    const caption    = document.getElementById("caption");
-    const secretBox  = document.getElementById("secretBox");
+  function runSequence(fortune) {
+    const T = {
+      boxAppear:  3000,
+      stickPull:  1400,
+      stickOut:   800,
+      rankFlash:  400,
+      confetti:   200,
+      photo:      1200,
+      caption:    600,
+      secret:     1400,
+    };
 
-    // Step 1: show divider + box
+    const divider     = document.getElementById("divider");
+    const box         = document.getElementById("surpriseBox");
+    const omikujiBox  = document.getElementById("omikujiBox");
+    const stick       = document.getElementById("omikujiStick");
+    const rankReveal  = document.getElementById("rankReveal");
+    const rankText    = document.getElementById("rankText");
+    const confLayer   = document.getElementById("confettiLayer");
+    const frame       = document.getElementById("photoFrame");
+    const caption     = document.getElementById("caption");
+    const secretBox   = document.getElementById("secretBox");
+
+    let t = T.boxAppear;
+
     setTimeout(() => {
       divider.classList.add("visible");
       box.classList.add("visible");
-    }, DELAY_BOX);
+    }, t);
 
-    // Step 2: box shakes, "?" bounces
+    t += T.stickPull;
     setTimeout(() => {
-      box.style.animation = "shake 0.6s ease";
-      box.addEventListener("animationend", () => {
-        box.style.animation = "";
-      }, { once: true });
-    }, DELAY_BOX + DELAY_SHAKE);
+      box.style.animation = "shake 0.5s ease";
+      box.addEventListener("animationend", () => { box.style.animation = ""; }, { once: true });
+      stick.classList.add("pulling");
+    }, t);
 
-    // Step 3: "?" disappears, photo pops in
+    t += T.stickOut;
     setTimeout(() => {
-      mystery.style.display = "none";
+      stick.classList.add("out");
+      omikujiBox.classList.add("done");
+    }, t);
+
+    t += T.rankFlash;
+    setTimeout(() => {
+      rankReveal.classList.add("visible");
+      rankText.classList.add("stamp");
+      if (fortune.rank === "大吉") rankText.classList.add("daikichi");
+    }, t);
+
+    t += T.confetti;
+    setTimeout(() => {
+      spawnConfetti(confLayer);
+      confLayer.classList.add("visible");
+    }, t);
+
+    t += T.photo;
+    setTimeout(() => {
       frame.classList.add("pop");
-    }, DELAY_BOX + DELAY_SHAKE + DELAY_PHOTO);
+    }, t);
 
-    // Step 4: caption fades in
+    t += T.caption;
     setTimeout(() => {
       if (caption) caption.classList.add("visible");
-    }, DELAY_BOX + DELAY_SHAKE + DELAY_PHOTO + DELAY_CAP);
+    }, t);
 
-    // Step 5: secret message
+    t += T.secret;
     setTimeout(() => {
       if (secretBox) secretBox.classList.add("visible");
-    }, DELAY_BOX + DELAY_SHAKE + DELAY_PHOTO + DELAY_CAP + DELAY_SECRET);
+    }, t);
   }
 
   /* ---- error ---- */
