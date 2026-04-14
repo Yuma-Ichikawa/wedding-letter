@@ -1,0 +1,700 @@
+/* ============================================================
+   Wedding Hidden Letter - style.css
+   テーマカラーを変更するにはこの CSS 変数を編集してください
+   ============================================================ */
+
+:root {
+  --color-bg: #faf5ef;
+  --color-card: #ffffff;
+  --color-text: #4a3728;
+  --color-text-light: #8b7355;
+  --color-accent: #d4a574;
+  --color-accent-dark: #b8834a;
+  --color-envelope: #e8d5b7;
+  --color-envelope-dark: #c4a882;
+  --color-envelope-flap: #d9c4a5;
+  --color-wax: #c0392b;
+  --color-wax-shine: #e74c3c;
+  --color-secret-word: #b8834a;
+  --color-hidden-bg: #fef9f0;
+  --font-serif: "Noto Serif JP", "Hiragino Mincho ProN", serif;
+  --font-cursive: "Klee One", "Noto Serif JP", serif;
+  --shadow-soft: 0 4px 24px rgba(74, 55, 40, 0.08);
+  --shadow-lift: 0 8px 32px rgba(74, 55, 40, 0.15);
+  --radius: 16px;
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-serif);
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   ENVELOPE (封筒)
+   ============================================================ */
+
+.envelope-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  z-index: 1000;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+.envelope-screen.opened {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.envelope-hint {
+  margin-top: 24px;
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+.envelope {
+  position: relative;
+  width: 280px;
+  height: 200px;
+  cursor: pointer;
+  perspective: 800px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.envelope-body {
+  position: absolute;
+  inset: 0;
+  background: var(--color-envelope);
+  border-radius: 4px 4px 12px 12px;
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+}
+
+.envelope-body::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    135deg,
+    transparent 33%,
+    var(--color-envelope-dark) 33%,
+    var(--color-envelope-dark) 34%,
+    var(--color-envelope) 34%
+  );
+}
+
+.envelope-flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: var(--color-envelope-flap);
+  transform-origin: top center;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  z-index: 2;
+}
+
+.envelope.opening .envelope-flap {
+  transform: rotateX(180deg);
+}
+
+.wax-seal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 35%,
+    var(--color-wax-shine),
+    var(--color-wax) 60%
+  );
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  transition: transform 0.3s ease;
+}
+
+.wax-seal::after {
+  content: "💌";
+  font-size: 1.6rem;
+}
+
+.envelope:active .wax-seal {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.envelope.opening .wax-seal {
+  animation: sealBreak 0.4s 0.2s forwards;
+}
+
+/* ============================================================
+   LETTER CONTENT (手紙)
+   ============================================================ */
+
+.letter-container {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s;
+  padding: 24px 16px 120px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.letter-container.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.letter-header {
+  text-align: center;
+  padding: 32px 0 16px;
+}
+
+.letter-header h1 {
+  font-family: var(--font-cursive);
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: var(--color-text);
+  letter-spacing: 0.05em;
+}
+
+.letter-date {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  margin-top: 8px;
+}
+
+.letter-body {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 32px 24px;
+  margin: 16px 0;
+  position: relative;
+}
+
+.letter-body::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  border: 1px solid rgba(212, 165, 116, 0.2);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.letter-text {
+  font-family: var(--font-cursive);
+  font-size: 1.05rem;
+  line-height: 2;
+  white-space: pre-line;
+}
+
+.letter-signature {
+  text-align: right;
+  margin-top: 24px;
+  font-family: var(--font-cursive);
+  font-size: 1.1rem;
+  color: var(--color-accent-dark);
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+}
+
+/* ============================================================
+   SECRET WORD (秘密の言葉)
+   ============================================================ */
+
+.secret-word {
+  color: var(--color-secret-word);
+  cursor: pointer;
+  position: relative;
+  border-bottom: 1px dotted var(--color-secret-word);
+  transition: color var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.secret-word:hover {
+  color: var(--color-accent-dark);
+}
+
+.secret-word-bubble {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  background: var(--color-text);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 10;
+  pointer-events: none;
+  max-width: 260px;
+  white-space: normal;
+  text-align: center;
+}
+
+.secret-word-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--color-text);
+}
+
+.secret-word-bubble.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ============================================================
+   HIDDEN BUTTONS (隠しボタン)
+   ============================================================ */
+
+.hidden-section {
+  margin-top: 24px;
+}
+
+.hidden-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: 2px dashed var(--color-accent);
+  padding: 14px 20px;
+  border-radius: var(--radius);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hidden-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-accent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.hidden-btn:hover::before {
+  opacity: 0.05;
+}
+
+.hidden-btn:active {
+  transform: scale(0.97);
+}
+
+.hidden-btn .btn-emoji {
+  font-size: 1.4rem;
+  position: relative;
+}
+
+.hidden-btn .btn-label {
+  position: relative;
+}
+
+.hidden-btn.discovered {
+  border-style: solid;
+  border-color: var(--color-accent-dark);
+  background: var(--color-hidden-bg);
+}
+
+/* revealed card */
+.hidden-reveal {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s ease;
+  opacity: 0;
+}
+
+.hidden-reveal.show {
+  max-height: 400px;
+  opacity: 1;
+}
+
+.hidden-card {
+  background: var(--color-hidden-bg);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-soft);
+  animation: cardPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hidden-card .card-emoji {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.hidden-card .card-title {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.hidden-card .card-text {
+  font-family: var(--font-cursive);
+  font-size: 1rem;
+  line-height: 1.8;
+  text-align: center;
+  white-space: pre-line;
+}
+
+/* ============================================================
+   LONG-PRESS TOOLTIP (長押し)
+   ============================================================ */
+
+.long-press-tooltip {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 24px 32px;
+  box-shadow: var(--shadow-lift);
+  z-index: 500;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+  max-width: 320px;
+}
+
+.long-press-tooltip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.long-press-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 499;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.long-press-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ============================================================
+   SCROLL SECRET (スクロール秘密)
+   ============================================================ */
+
+.scroll-secret {
+  padding: 40px 24px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.8s ease;
+}
+
+.scroll-secret.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-secret-divider {
+  width: 60px;
+  height: 2px;
+  background: var(--color-accent);
+  margin: 0 auto 20px;
+  border-radius: 1px;
+}
+
+.scroll-secret-text {
+  font-family: var(--font-cursive);
+  font-size: 0.95rem;
+  line-height: 2;
+  color: var(--color-text-light);
+  white-space: pre-line;
+}
+
+/* ============================================================
+   ALL-FOUND BANNER (全発見ボーナス)
+   ============================================================ */
+
+.all-found-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: var(--color-card);
+  border-radius: 24px;
+  padding: 40px 32px;
+  box-shadow: 0 16px 64px rgba(74, 55, 40, 0.25);
+  z-index: 2000;
+  text-align: center;
+  max-width: 340px;
+  width: 90%;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.all-found-banner.show {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.all-found-banner .banner-emoji {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.all-found-banner .banner-text {
+  font-family: var(--font-cursive);
+  font-size: 1.1rem;
+  line-height: 2;
+  white-space: pre-line;
+}
+
+.all-found-banner .banner-close {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 28px;
+  border: 2px solid var(--color-accent);
+  border-radius: 24px;
+  background: none;
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.all-found-banner .banner-close:active {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.all-found-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s ease;
+}
+
+.all-found-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ============================================================
+   DISCOVERY COUNTER (発見カウンター)
+   ============================================================ */
+
+.discovery-counter {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--color-card);
+  border-radius: 24px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow-soft);
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  z-index: 100;
+  transition: all var(--transition);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.discovery-counter.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.discovery-counter .counter-fill {
+  display: inline-block;
+  color: var(--color-accent-dark);
+  font-weight: 600;
+}
+
+/* ============================================================
+   SHAKE HINT (シェイクヒント)
+   ============================================================ */
+
+.shake-hint {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--color-text);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 0.85rem;
+  opacity: 0;
+  z-index: 100;
+  pointer-events: none;
+  transition: all 0.4s ease;
+  white-space: nowrap;
+}
+
+.shake-hint.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   EFFECTS CANVAS
+   ============================================================ */
+
+.effects-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ============================================================
+   ERROR STATE
+   ============================================================ */
+
+.error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  text-align: center;
+}
+
+.error-screen .error-emoji {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.error-screen .error-text {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  line-height: 1.8;
+}
+
+/* ============================================================
+   KEYFRAME ANIMATIONS
+   ============================================================ */
+
+@keyframes sealBreak {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+}
+
+@keyframes cardPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-120px) scale(0.5); opacity: 0; }
+}
+
+@keyframes firework {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  50% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 380px) {
+  .letter-body {
+    padding: 24px 16px;
+  }
+
+  .letter-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .envelope {
+    width: 240px;
+    height: 170px;
+  }
+
+  .wax-seal {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (min-width: 600px) {
+  .letter-container {
+    padding: 32px 24px 120px;
+  }
+}
