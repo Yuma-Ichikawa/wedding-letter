@@ -5,6 +5,8 @@
     { img: "assets/images/3.jpg", rank: "中吉", caption: "体が大きいだけで戦えた" },
   ];
 
+  const SECRET_VISIBLE_MS = 5000;
+
   /* ---- decode ---- */
 
   function decode() {
@@ -28,28 +30,55 @@
     return d.innerHTML;
   }
 
-  /* ---- confetti ---- */
+  /* ---- particles ---- */
 
   function spawnConfetti(container) {
-    const colors = ["#c9a87c", "#e8d5b7", "#f0c674", "#e88b72", "#8cc5b2", "#f5a0b8"];
-    const count = 40;
+    const colors = ["#c9a87c", "#e8d5b7", "#f0c674", "#e88b72", "#8cc5b2", "#f5a0b8", "#d4a0d4"];
+    const count = 50;
     for (let i = 0; i < count; i++) {
       const el = document.createElement("div");
       el.className = "confetti-piece";
-      el.style.setProperty("--x", (Math.random() * 200 - 100).toFixed(0) + "px");
-      el.style.setProperty("--r", (Math.random() * 720 - 360).toFixed(0) + "deg");
-      el.style.setProperty("--d", (Math.random() * 0.5 + 0.6).toFixed(2) + "s");
-      el.style.left = (50 + (Math.random() * 30 - 15)).toFixed(0) + "%";
-      el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      const x = (Math.random() * 260 - 130).toFixed(0);
+      const y = (Math.random() * 200 + 120).toFixed(0);
+      const r = (Math.random() * 1080 - 540).toFixed(0);
+      const delay = (Math.random() * 0.3).toFixed(2);
+      const dur = (Math.random() * 0.6 + 0.8).toFixed(2);
+      el.style.cssText =
+        `--x:${x}px;--y:${y}px;--r:${r}deg;` +
+        `animation-delay:${delay}s;animation-duration:${dur}s;` +
+        `left:${(50 + Math.random() * 30 - 15).toFixed(0)}%;` +
+        `background:${colors[Math.floor(Math.random() * colors.length)]};`;
       if (Math.random() > 0.5) {
         el.style.borderRadius = "50%";
-        el.style.width = el.style.height = (Math.random() * 6 + 4) + "px";
+        const s = (Math.random() * 6 + 4).toFixed(1);
+        el.style.width = el.style.height = s + "px";
       } else {
-        el.style.width = (Math.random() * 8 + 4) + "px";
-        el.style.height = (Math.random() * 4 + 3) + "px";
+        el.style.width = (Math.random() * 10 + 5) + "px";
+        el.style.height = (Math.random() * 5 + 3) + "px";
       }
       container.appendChild(el);
     }
+  }
+
+  function spawnSparkles(container) {
+    for (let i = 0; i < 8; i++) {
+      const el = document.createElement("div");
+      el.className = "sparkle";
+      el.textContent = "✦";
+      el.style.cssText =
+        `left:${(Math.random() * 80 + 10).toFixed(0)}%;` +
+        `top:${(Math.random() * 60 + 20).toFixed(0)}%;` +
+        `animation-delay:${(Math.random() * 0.6).toFixed(2)}s;` +
+        `font-size:${(Math.random() * 10 + 10).toFixed(0)}px;`;
+      container.appendChild(el);
+    }
+  }
+
+  /* ---- smooth scroll ---- */
+
+  function smoothScrollTo(el) {
+    const y = el.getBoundingClientRect().top + window.scrollY - 60;
+    window.scrollTo({ top: y, behavior: "smooth" });
   }
 
   /* ---- render ---- */
@@ -75,9 +104,12 @@
 
         `<div class="omikuji-box" id="omikujiBox">`,
           `<div class="omikuji-label">おみくじ</div>`,
-          `<div class="omikuji-stick" id="omikujiStick">`,
-            `<div class="stick-body"></div>`,
-            `<div class="stick-tip"></div>`,
+          `<div class="omikuji-cylinder" id="omikujiCylinder">`,
+            `<div class="cylinder-body"></div>`,
+            `<div class="omikuji-stick" id="omikujiStick">`,
+              `<div class="stick-shaft"></div>`,
+              `<div class="stick-tip"></div>`,
+            `</div>`,
           `</div>`,
         `</div>`,
 
@@ -87,15 +119,24 @@
 
         `<div class="confetti-layer" id="confettiLayer"></div>`,
 
-        `<div class="photo-frame" id="photoFrame" style="--tilt:${tilt}deg">`,
-          `<img src="${fortune.img}" alt="" loading="eager">`,
+        `<div class="photo-area" id="photoArea">`,
+          `<div class="photo-frame" id="photoFrame" style="--tilt:${tilt}deg">`,
+            `<img src="${fortune.img}" alt="" loading="eager">`,
+          `</div>`,
+          `<div class="photo-caption" id="caption">${esc(fortune.caption)}</div>`,
         `</div>`,
-        `<div class="photo-caption" id="caption">${esc(fortune.caption)}</div>`,
 
         d.secret
           ? `<div class="secret-box" id="secretBox">` +
               `<div class="secret-label">secret message</div>` +
-              `<div class="secret-text">${esc(d.secret)}</div>` +
+              `<div class="secret-content" id="secretContent">` +
+                `<div class="secret-text">${esc(d.secret)}</div>` +
+              `</div>` +
+              `<div class="secret-burned" id="secretBurned">` +
+                `<span class="burned-icon">🔥</span>` +
+                `<span class="burned-text">危険すぎるので消えました</span>` +
+                `<span class="burned-sub">（QRを読み直すとまた見えます）</span>` +
+              `</div>` +
             `</div>`
           : "",
       `</div>`,
@@ -103,82 +144,106 @@
       `<div class="footer-space"></div>`,
     ].join("");
 
-    runSequence(fortune);
+    new Image().src = fortune.img;
+    runSequence();
   }
 
   /* ---- animation sequence ---- */
 
-  function runSequence(fortune) {
-    const T = {
-      boxAppear:  3000,
-      stickPull:  1400,
-      stickOut:   800,
-      rankFlash:  400,
-      confetti:   200,
-      photo:      1200,
-      caption:    600,
-      secret:     1400,
-    };
+  function runSequence() {
+    const $ = (id) => document.getElementById(id);
 
-    const divider     = document.getElementById("divider");
-    const box         = document.getElementById("surpriseBox");
-    const omikujiBox  = document.getElementById("omikujiBox");
-    const stick       = document.getElementById("omikujiStick");
-    const rankReveal  = document.getElementById("rankReveal");
-    const rankText    = document.getElementById("rankText");
-    const confLayer   = document.getElementById("confettiLayer");
-    const frame       = document.getElementById("photoFrame");
-    const caption     = document.getElementById("caption");
-    const secretBox   = document.getElementById("secretBox");
+    const divider    = $("divider");
+    const box        = $("surpriseBox");
+    const cylinder   = $("omikujiCylinder");
+    const omikujiBox = $("omikujiBox");
+    const stick      = $("omikujiStick");
+    const rankReveal = $("rankReveal");
+    const rankText   = $("rankText");
+    const confLayer  = $("confettiLayer");
+    const photoArea  = $("photoArea");
+    const frame      = $("photoFrame");
+    const caption    = $("caption");
+    const secretBox  = $("secretBox");
+    const secretContent = $("secretContent");
+    const secretBurned  = $("secretBurned");
 
-    let t = T.boxAppear;
+    let t = 3000;
 
-    setTimeout(() => {
+    // 1 — divider + box slide in
+    at(t, () => {
       divider.classList.add("visible");
       box.classList.add("visible");
-    }, t);
+      setTimeout(() => smoothScrollTo(box), 300);
+    });
 
-    t += T.stickPull;
-    setTimeout(() => {
-      box.style.animation = "shake 0.5s ease";
-      box.addEventListener("animationend", () => { box.style.animation = ""; }, { once: true });
-      stick.classList.add("pulling");
-    }, t);
+    // 2 — cylinder shakes
+    t += 1200;
+    at(t, () => {
+      cylinder.classList.add("shaking");
+    });
 
-    t += T.stickOut;
-    setTimeout(() => {
+    // 3 — stick rises out
+    t += 900;
+    at(t, () => {
+      cylinder.classList.remove("shaking");
+      stick.classList.add("rising");
+    });
+
+    // 4 — stick flies away, box collapses
+    t += 700;
+    at(t, () => {
       stick.classList.add("out");
-      omikujiBox.classList.add("done");
-    }, t);
+      setTimeout(() => omikujiBox.classList.add("done"), 300);
+    });
 
-    t += T.rankFlash;
-    setTimeout(() => {
+    // 5 — rank stamps in + sparkles
+    t += 500;
+    at(t, () => {
       rankReveal.classList.add("visible");
       rankText.classList.add("stamp");
-      if (fortune.rank === "大吉") rankText.classList.add("daikichi");
-    }, t);
-
-    t += T.confetti;
-    setTimeout(() => {
-      spawnConfetti(confLayer);
+      spawnSparkles(confLayer);
       confLayer.classList.add("visible");
-    }, t);
+    });
 
-    t += T.photo;
-    setTimeout(() => {
+    // 6 — confetti burst
+    t += 400;
+    at(t, () => {
+      spawnConfetti(confLayer);
+    });
+
+    // 7 — photo slides up
+    t += 800;
+    at(t, () => {
+      photoArea.classList.add("visible");
       frame.classList.add("pop");
-    }, t);
+    });
 
-    t += T.caption;
-    setTimeout(() => {
+    // 8 — caption
+    t += 700;
+    at(t, () => {
       if (caption) caption.classList.add("visible");
-    }, t);
+    });
 
-    t += T.secret;
-    setTimeout(() => {
-      if (secretBox) secretBox.classList.add("visible");
-    }, t);
+    // 9 — secret message appears
+    t += 1200;
+    at(t, () => {
+      if (!secretBox) return;
+      secretBox.classList.add("visible");
+      smoothScrollTo(secretBox);
+
+      // 10 — secret auto-destructs
+      setTimeout(() => {
+        secretContent.classList.add("burning");
+        setTimeout(() => {
+          secretContent.classList.add("gone");
+          secretBurned.classList.add("visible");
+        }, 800);
+      }, SECRET_VISIBLE_MS);
+    });
   }
+
+  function at(ms, fn) { setTimeout(fn, ms); }
 
   /* ---- error ---- */
 
