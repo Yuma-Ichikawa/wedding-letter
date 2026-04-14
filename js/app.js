@@ -1,32 +1,61 @@
 /* ============================================================
-   app.js - Main application
-   ハッシュデコード / テンプレート描画 / インタラクション管理
+   app.js - Main application (v2)
    ============================================================ */
 
 const App = (() => {
   let guestData = null;
-  let discoveredCount = 0;
+  const discovered = new Set();
   let totalSecrets = 0;
   let allFoundShown = false;
 
-  /* ---------- Hash decode ---------- */
+  /* ---------- URL-safe base64 decode ---------- */
+
+  function b64Decode(str) {
+    let s = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    const bin = atob(s);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
 
   function decodeHash() {
-    const hash = location.hash.slice(1);
+    let hash = location.hash.slice(1);
     if (!hash) return null;
     try {
-      const json = decodeURIComponent(escape(atob(hash)));
-      return JSON.parse(json);
+      hash = decodeURIComponent(hash);
+    } catch { /* already decoded */ }
+    try {
+      return JSON.parse(b64Decode(hash));
     } catch {
       try {
-        return JSON.parse(decodeURIComponent(hash));
+        return JSON.parse(b64Decode(hash.replace(/\+/g, "-").replace(/\//g, "_")));
       } catch {
         return null;
       }
     }
   }
 
-  /* ---------- Render ---------- */
+  /* ---------- Demo data for testing ---------- */
+
+  function getDemoData() {
+    return {
+      n: "太郎", h: "くん",
+      l: "太郎くんには学生時代から本当にお世話になりました。\nいつも温かく見守ってくれて、本当にありがとう。\nあの頃の楽しかった日々を思い出すと、自然と笑顔になります。\nこれからも末永くよろしくお願いします。",
+      from: "花子 & 一郎",
+      sw: { w: "楽しかった日々", m: "特にあの文化祭の打ち上げは最高だったね！🎶" },
+      s: [
+        { e: "📸", t: "今日は二人のベストショットをたくさん撮ってね！\nカメラマンより良い写真を期待してます📷", title: "今日のミッション" },
+        { e: "😂🏕️", t: "大学3年のあの合宿...\n太郎くんの寝顔の写真、まだ持ってます（笑）", title: "あの日の思い出" },
+        { e: "🥂", t: "太郎くんにも素敵な出会いがありますように...\n...なんてね！今日は一緒に楽しもう！", title: "最後の秘密" },
+      ],
+      ss: "ここまでスクロールしてくれたの？！\nさすが太郎くん、探究心の塊だね（笑）\n二次会では隣に座ってね🍻",
+      lps: "実は花子がこの手紙を書くのに3時間かかりました😂",
+      af: "全部見つけてくれてありがとう！\nさすが太郎くん！\n今日は最高の一日にしよう🎉",
+    };
+  }
+
+  /* ---------- Error / Demo screen ---------- */
 
   function showError() {
     document.getElementById("app").innerHTML = `
@@ -36,175 +65,252 @@ const App = (() => {
           このリンクは無効です。<br>
           QRコードをもう一度スキャンしてください。
         </p>
+        <button class="demo-btn" id="demoBtn">デモを見る</button>
       </div>`;
+    document.getElementById("demoBtn")?.addEventListener("click", () => {
+      renderLetter(getDemoData());
+    });
   }
+
+  /* ---------- Render ---------- */
 
   function renderLetter(data) {
     guestData = data;
+    discovered.clear();
+    allFoundShown = false;
 
-    const secretCount =
+    totalSecrets =
       (data.s ? data.s.length : 0) +
       (data.sw ? 1 : 0) +
       (data.lps ? 1 : 0) +
-      (data.ss ? 1 : 0);
-    totalSecrets = secretCount;
+      (data.ss ? 1 : 0) +
+      1; // header easter egg
 
     const letterHtml = buildLetterWithSecretWord(data.l, data.sw);
 
     const hiddenButtonsHtml = (data.s || [])
-      .map(
-        (secret, i) => `
-        <button class="hidden-btn" data-idx="${i}" aria-label="隠しメッセージ ${i + 1}">
-          <span class="btn-emoji">${secret.e || "🎁"}</span>
-          <span class="btn-label">${escHtml(secret.title || "ここを押してね")}</span>
-        </button>
-        <div class="hidden-reveal" id="reveal-${i}">
-          <div class="hidden-card">
-            <div class="card-emoji">${secret.e || "🎁"}</div>
-            ${secret.title ? `<div class="card-title">${escHtml(secret.title)}</div>` : ""}
-            <div class="card-text">${escHtml(secret.t)}</div>
+      .map((sec, i) => `
+        <div class="hidden-item">
+          <button class="hidden-btn" data-idx="${i}">
+            <span class="btn-emoji">${sec.e || "🎁"}</span>
+            <span class="btn-label">${esc(sec.title || "ここを押してね")}</span>
+            <span class="btn-arrow">›</span>
+          </button>
+          <div class="hidden-reveal" id="reveal-${i}">
+            <div class="hidden-card">
+              <div class="card-emoji">${sec.e || "🎁"}</div>
+              ${sec.title ? `<div class="card-title">${esc(sec.title)}</div>` : ""}
+              <div class="card-text">${esc(sec.t)}</div>
+            </div>
           </div>
         </div>`
-      )
-      .join("");
+      ).join("");
 
     const today = formatDate(new Date());
 
     document.getElementById("app").innerHTML = `
-      <!-- Envelope -->
       <div class="envelope-screen" id="envelopeScreen">
-        <div class="envelope" id="envelope">
-          <div class="envelope-body"></div>
-          <div class="envelope-flap"></div>
-          <div class="wax-seal"></div>
+        <div class="envelope-wrapper">
+          <div class="envelope" id="envelope">
+            <div class="envelope-back"></div>
+            <div class="envelope-letter-peek"></div>
+            <div class="envelope-front"></div>
+            <div class="envelope-flap"></div>
+            <div class="wax-seal" id="waxSeal"></div>
+          </div>
+          <p class="envelope-hint">タップして開封</p>
         </div>
-        <p class="envelope-hint">タップして開封</p>
       </div>
 
-      <!-- Letter -->
       <div class="letter-container" id="letterContainer">
-        <div class="letter-header">
-          <h1>💌 ${escHtml(data.n)}${escHtml(data.h || "さん")}へ</h1>
+        <header class="letter-header">
+          <div class="header-emoji" id="headerEmoji">💌</div>
+          <h1><span id="guestTitle">${esc(data.n)}${esc(data.h || "さん")}</span>へ</h1>
           <div class="letter-date">${today}</div>
-        </div>
+        </header>
 
-        <div class="letter-body">
-          <div class="letter-text">${letterHtml}</div>
-          <div class="letter-signature" id="signature">
-            ${escHtml(data.from || "")}
-          </div>
-        </div>
+        <article class="letter-body">
+          <div class="letter-text" id="letterText">${letterHtml}</div>
+          <div class="letter-signature" id="signature">${esc(data.from || "")}</div>
+        </article>
 
-        <div class="hidden-section">
+        <section class="hidden-section" id="hiddenSection">
           ${hiddenButtonsHtml}
-        </div>
+        </section>
 
-        <!-- Scroll secret (見えない位置に配置) -->
-        <div style="height: 80px"></div>
+        <div class="scroll-gap"></div>
         <div class="scroll-secret" id="scrollSecret">
           <div class="scroll-secret-divider"></div>
-          <div class="scroll-secret-text">${escHtml(data.ss || "")}</div>
+          <div class="scroll-secret-text">${esc(data.ss || "")}</div>
         </div>
       </div>
 
-      <!-- Long-press tooltip -->
-      <div class="long-press-overlay" id="lpOverlay"></div>
-      <div class="long-press-tooltip" id="lpTooltip"></div>
+      <div class="modal-overlay" id="modalOverlay"></div>
+      <div class="modal-box" id="modalBox"></div>
 
-      <!-- All-found banner -->
       <div class="all-found-overlay" id="afOverlay"></div>
       <div class="all-found-banner" id="afBanner">
         <div class="banner-emoji">🎉🎊🥳</div>
-        <div class="banner-text">${escHtml(data.af || "全部見つけてくれてありがとう！")}</div>
+        <div class="banner-text">${esc(data.af || "全部見つけてくれてありがとう！")}</div>
         <button class="banner-close" id="afClose">とじる</button>
       </div>
 
-      <!-- Discovery counter -->
       <div class="discovery-counter" id="counter">
-        🔍 <span class="counter-fill" id="counterText">0</span> / ${totalSecrets}
+        <div class="counter-bar"><div class="counter-fill" id="counterBar"></div></div>
+        <span class="counter-label">🔍 <span id="counterText">0</span> / ${totalSecrets}</span>
       </div>
 
-      <!-- Shake hint -->
-      <div class="shake-hint" id="shakeHint">📱 スマホを振ってみて！</div>
-
-      <!-- Effects canvas -->
+      <div class="toast" id="toast"></div>
       <canvas class="effects-canvas"></canvas>`;
 
     Effects.init();
     bindEnvelope();
     bindHiddenButtons();
+    bindSecretWord();
     bindLongPress();
     bindShake();
     bindScrollSecret();
+    bindHeaderEasterEgg();
+    bindModalClose();
     bindAllFoundClose();
-
-    setTimeout(showShakeHint, 8000);
+    scheduleHints();
   }
 
+  /* ---------- Letter builder ---------- */
+
   function buildLetterWithSecretWord(text, sw) {
-    if (!sw || !sw.w) return escHtml(text);
-    const escaped = escHtml(text);
-    const word = escHtml(sw.w);
+    if (!sw || !sw.w) return esc(text);
+    const escaped = esc(text);
+    const word = esc(sw.w);
     return escaped.replace(
       word,
-      `<span class="secret-word" id="secretWord">${word}<span class="secret-word-bubble" id="swBubble">${escHtml(sw.m)}</span></span>`
+      `<span class="secret-word" id="secretWord">${word}</span>`
     );
   }
 
-  function escHtml(s) {
+  function esc(s) {
     if (!s) return "";
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
   }
 
   function formatDate(d) {
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    return `${y}年${m}月${day}日`;
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
   }
 
-  /* ---------- Envelope interaction ---------- */
+  /* ---------- Envelope ---------- */
 
   function bindEnvelope() {
     const screen = document.getElementById("envelopeScreen");
     const envelope = document.getElementById("envelope");
     if (!screen || !envelope) return;
 
+    let opened = false;
     envelope.addEventListener("click", () => {
+      if (opened) return;
+      opened = true;
+      vibrate(30);
       envelope.classList.add("opening");
+
+      setTimeout(() => {
+        envelope.classList.add("letter-rising");
+      }, 500);
+
       setTimeout(() => {
         screen.classList.add("opened");
-        const container = document.getElementById("letterContainer");
-        if (container) container.classList.add("visible");
-        Effects.sakura(30);
-      }, 800);
+        const cont = document.getElementById("letterContainer");
+        if (cont) {
+          cont.classList.add("visible");
+          typewriterEffect();
+        }
+        Effects.sakura(35);
+        Effects.hearts(window.innerWidth / 2, window.innerHeight * 0.3, 6);
+      }, 1200);
     });
+  }
+
+  /* ---------- Typewriter effect ---------- */
+
+  function typewriterEffect() {
+    const el = document.getElementById("letterText");
+    if (!el) return;
+
+    const fullHtml = el.innerHTML;
+    const textNodes = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+    if (textNodes.length === 0) return;
+
+    const originals = textNodes.map(n => n.textContent);
+    const totalChars = originals.reduce((sum, t) => sum + t.length, 0);
+    textNodes.forEach(n => { n.textContent = ""; });
+
+    el.classList.add("typing");
+
+    let charIdx = 0;
+    let nodeIdx = 0;
+    let localIdx = 0;
+    let skipped = false;
+
+    const speed = Math.max(20, Math.min(45, 2000 / totalChars));
+
+    function type() {
+      if (skipped || charIdx >= totalChars) {
+        finish();
+        return;
+      }
+      if (localIdx >= originals[nodeIdx].length) {
+        nodeIdx++;
+        localIdx = 0;
+      }
+      if (nodeIdx < textNodes.length) {
+        textNodes[nodeIdx].textContent += originals[nodeIdx][localIdx];
+        localIdx++;
+        charIdx++;
+      }
+      setTimeout(type, speed);
+    }
+
+    function finish() {
+      textNodes.forEach((n, i) => { n.textContent = originals[i]; });
+      el.classList.remove("typing");
+    }
+
+    el.addEventListener("click", () => { skipped = true; }, { once: true });
+
+    setTimeout(type, 400);
   }
 
   /* ---------- Hidden buttons ---------- */
 
   function bindHiddenButtons() {
-    document.querySelectorAll(".hidden-btn").forEach((btn) => {
+    document.querySelectorAll(".hidden-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const idx = btn.dataset.idx;
         const reveal = document.getElementById(`reveal-${idx}`);
         if (!reveal) return;
 
-        const wasHidden = !reveal.classList.contains("show");
-        reveal.classList.toggle("show");
-        btn.classList.toggle("discovered");
+        const isOpen = reveal.classList.contains("show");
+        if (isOpen) {
+          reveal.classList.remove("show");
+          btn.querySelector(".btn-arrow").textContent = "›";
+          return;
+        }
 
-        if (wasHidden) {
-          discover();
+        reveal.classList.add("show");
+        btn.classList.add("discovered");
+        btn.querySelector(".btn-arrow").textContent = "⌄";
+
+        if (!discovered.has(`btn-${idx}`)) {
+          discovered.add(`btn-${idx}`);
+          vibrate(20);
           const rect = btn.getBoundingClientRect();
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top;
-          Effects.confetti(cx, cy, 30);
-          Effects.emojiBurst(cx, cy, "🎉✨🌸💫🎊", 8);
+          Effects.confetti(rect.left + rect.width / 2, rect.top, 35);
+          Effects.emojiBurst(rect.left + rect.width / 2, rect.top, "🎉✨🌸💫", 6);
+          updateCounter();
+          checkAllFound();
         }
       });
     });
@@ -212,51 +318,58 @@ const App = (() => {
 
   /* ---------- Secret word ---------- */
 
-  // Secret word binding is done through event delegation
-  document.addEventListener("click", (e) => {
-    const sw = e.target.closest("#secretWord");
+  function bindSecretWord() {
+    const sw = document.getElementById("secretWord");
     if (!sw) return;
-    const bubble = document.getElementById("swBubble");
-    if (!bubble) return;
 
-    const wasHidden = !bubble.classList.contains("show");
-    bubble.classList.toggle("show");
+    sw.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showModal(guestData.sw.m, "💡");
 
-    if (wasHidden) {
-      discover();
-      const rect = sw.getBoundingClientRect();
-      Effects.emojiBurst(
-        rect.left + rect.width / 2,
-        rect.top,
-        "💡🌟✨",
-        6
-      );
-    }
-  });
+      if (!discovered.has("sw")) {
+        discovered.add("sw");
+        vibrate(20);
+        const rect = sw.getBoundingClientRect();
+        Effects.emojiBurst(rect.left + rect.width / 2, rect.top, "💡🌟✨", 6);
+        sw.classList.add("found");
+        updateCounter();
+        checkAllFound();
+      }
+    });
+  }
 
-  /* ---------- Long-press on signature ---------- */
+  /* ---------- Long press on signature ---------- */
 
   function bindLongPress() {
     const sig = document.getElementById("signature");
-    if (!sig) return;
+    if (!sig || !guestData.lps) return;
 
     let timer = null;
-    let triggered = false;
+    const dur = 700;
 
-    const start = () => {
-      if (triggered) return;
+    function start(e) {
+      if (discovered.has("lp")) return;
+      e.preventDefault();
+      sig.classList.add("pressing");
       timer = setTimeout(() => {
-        triggered = true;
-        showLongPressTooltip();
-        discover();
-      }, 800);
-    };
+        sig.classList.remove("pressing");
+        showModal(guestData.lps, "🤫");
+        if (!discovered.has("lp")) {
+          discovered.add("lp");
+          vibrate(40);
+          Effects.emojiBurst(window.innerWidth / 2, window.innerHeight / 2, "😂🤣😆", 10);
+          updateCounter();
+          checkAllFound();
+        }
+      }, dur);
+    }
 
-    const cancel = () => {
+    function cancel() {
+      sig.classList.remove("pressing");
       if (timer) clearTimeout(timer);
-    };
+    }
 
-    sig.addEventListener("touchstart", start, { passive: true });
+    sig.addEventListener("touchstart", start, { passive: false });
     sig.addEventListener("touchend", cancel);
     sig.addEventListener("touchcancel", cancel);
     sig.addEventListener("mousedown", start);
@@ -264,112 +377,49 @@ const App = (() => {
     sig.addEventListener("mouseleave", cancel);
   }
 
-  function showLongPressTooltip() {
-    const tooltip = document.getElementById("lpTooltip");
-    const overlay = document.getElementById("lpOverlay");
-    if (!tooltip || !overlay) return;
-
-    tooltip.innerHTML = `
-      <div style="font-size:2rem;margin-bottom:8px">🤫</div>
-      <p style="font-family:var(--font-cursive);line-height:1.8">
-        ${escHtml(guestData.lps || "ここは秘密だよ！")}
-      </p>`;
-    tooltip.classList.add("show");
-    overlay.classList.add("show");
-
-    Effects.emojiBurst(
-      window.innerWidth / 2,
-      window.innerHeight / 2,
-      "😂🤣😆",
-      10
-    );
-
-    const close = () => {
-      tooltip.classList.remove("show");
-      overlay.classList.remove("show");
-      overlay.removeEventListener("click", close);
-    };
-    overlay.addEventListener("click", close);
-  }
-
-  /* ---------- Shake detection ---------- */
+  /* ---------- Shake ---------- */
 
   function bindShake() {
     let lastX = 0, lastY = 0, lastZ = 0;
-    let shakeTriggered = false;
-    const threshold = 25;
+    let lastTime = 0;
+    const threshold = 28;
 
     if (typeof DeviceMotionEvent === "undefined") return;
 
-    // iOS 13+ requires permission
-    if (typeof DeviceMotionEvent.requestPermission === "function") {
-      document.addEventListener(
-        "click",
-        function reqPerm() {
-          DeviceMotionEvent.requestPermission()
-            .then((state) => {
-              if (state === "granted") {
-                window.addEventListener("devicemotion", onMotion);
-              }
-            })
-            .catch(() => {});
-          document.removeEventListener("click", reqPerm);
-        },
-        { once: true }
-      );
-    } else {
+    function listen() {
       window.addEventListener("devicemotion", onMotion);
     }
 
+    if (typeof DeviceMotionEvent.requestPermission === "function") {
+      document.addEventListener("click", function req() {
+        DeviceMotionEvent.requestPermission().then(s => {
+          if (s === "granted") listen();
+        }).catch(() => {});
+        document.removeEventListener("click", req);
+      }, { once: true });
+    } else {
+      listen();
+    }
+
     function onMotion(e) {
-      if (shakeTriggered) return;
+      if (discovered.has("shake")) return;
+      const now = Date.now();
+      if (now - lastTime < 200) return;
+      lastTime = now;
       const a = e.accelerationIncludingGravity;
       if (!a) return;
-      const dx = Math.abs(a.x - lastX);
-      const dy = Math.abs(a.y - lastY);
-      const dz = Math.abs(a.z - lastZ);
-      lastX = a.x;
-      lastY = a.y;
-      lastZ = a.z;
-
-      if (dx + dy + dz > threshold) {
-        shakeTriggered = true;
-        onShake();
+      const d = Math.abs(a.x - lastX) + Math.abs(a.y - lastY) + Math.abs(a.z - lastZ);
+      lastX = a.x; lastY = a.y; lastZ = a.z;
+      if (d > threshold) {
+        discovered.add("shake");
+        vibrate(50);
+        Effects.sakura(60);
+        Effects.confetti(window.innerWidth / 2, window.innerHeight / 3, 80);
+        showToast("🌸 おめでとうを桜の花びらに乗せて");
+        updateCounter();
+        checkAllFound();
       }
     }
-  }
-
-  function onShake() {
-    discover();
-    Effects.sakura(60);
-    Effects.confetti(window.innerWidth / 2, window.innerHeight / 3, 80);
-    hideShakeHint();
-
-    const msg = document.createElement("div");
-    msg.className = "long-press-tooltip show";
-    msg.innerHTML = `
-      <div style="font-size:2rem;margin-bottom:8px">🌸</div>
-      <p style="font-family:var(--font-cursive);line-height:1.8">
-        おめでとうを<br>桜の花びらに乗せて🌸
-      </p>`;
-    msg.style.zIndex = "600";
-    document.body.appendChild(msg);
-    setTimeout(() => {
-      msg.classList.remove("show");
-      setTimeout(() => msg.remove(), 400);
-    }, 3000);
-  }
-
-  function showShakeHint() {
-    const hint = document.getElementById("shakeHint");
-    if (!hint) return;
-    hint.classList.add("show");
-    setTimeout(() => hint.classList.remove("show"), 4000);
-  }
-
-  function hideShakeHint() {
-    const hint = document.getElementById("shakeHint");
-    if (hint) hint.classList.remove("show");
   }
 
   /* ---------- Scroll secret ---------- */
@@ -378,43 +428,133 @@ const App = (() => {
     const el = document.getElementById("scrollSecret");
     if (!el || !guestData.ss) return;
 
-    let triggered = false;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !triggered) {
-          triggered = true;
-          el.classList.add("revealed");
-          discover();
-          Effects.emojiBurst(
-            window.innerWidth / 2,
-            el.getBoundingClientRect().top,
-            "👀🔍🤫",
-            8
-          );
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !discovered.has("scroll")) {
+        discovered.add("scroll");
+        el.classList.add("revealed");
+        vibrate(15);
+        Effects.emojiBurst(window.innerWidth / 2, el.getBoundingClientRect().top, "👀🔍🤫", 8);
+        updateCounter();
+        checkAllFound();
+      }
+    }, { threshold: 0.3 });
+    obs.observe(el);
+  }
+
+  /* ---------- Header easter egg (5-tap) ---------- */
+
+  function bindHeaderEasterEgg() {
+    const emoji = document.getElementById("headerEmoji");
+    if (!emoji) return;
+
+    let taps = 0;
+    let timer = null;
+
+    emoji.addEventListener("click", () => {
+      taps++;
+      if (timer) clearTimeout(timer);
+
+      if (taps >= 5) {
+        taps = 0;
+        if (!discovered.has("header")) {
+          discovered.add("header");
+          vibrate(60);
+          Effects.starShower(40);
+          Effects.hearts(window.innerWidth / 2, window.innerHeight * 0.2, 12);
+          showToast("⭐ 隠しコマンド発見！おめでとう！");
+          emoji.classList.add("rainbow");
+          updateCounter();
+          checkAllFound();
+        } else {
+          Effects.starShower(20);
         }
-      },
-      { threshold: 0.3 }
-    );
-    observer.observe(el);
+      } else {
+        emoji.style.transform = `scale(${1 + taps * 0.15}) rotate(${taps * 10}deg)`;
+        timer = setTimeout(() => {
+          taps = 0;
+          emoji.style.transform = "";
+        }, 800);
+      }
+    });
+  }
+
+  /* ---------- Modal ---------- */
+
+  function showModal(text, emoji) {
+    const box = document.getElementById("modalBox");
+    const overlay = document.getElementById("modalOverlay");
+    if (!box || !overlay) return;
+
+    box.innerHTML = `
+      <div class="modal-emoji">${emoji || "💬"}</div>
+      <p class="modal-text">${esc(text)}</p>`;
+    box.classList.add("show");
+    overlay.classList.add("show");
+  }
+
+  function bindModalClose() {
+    const overlay = document.getElementById("modalOverlay");
+    const box = document.getElementById("modalBox");
+    if (!overlay) return;
+
+    function close() {
+      box?.classList.remove("show");
+      overlay.classList.remove("show");
+    }
+    overlay.addEventListener("click", close);
+    box?.addEventListener("click", close);
+  }
+
+  /* ---------- Toast ---------- */
+
+  function showToast(msg) {
+    const el = document.getElementById("toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 3500);
+  }
+
+  /* ---------- Hints ---------- */
+
+  function scheduleHints() {
+    setTimeout(() => {
+      if (discovered.size === 0) {
+        showToast("💡 ページのどこかに秘密が隠されています...");
+      }
+    }, 12000);
+
+    setTimeout(() => {
+      document.querySelectorAll(".hidden-btn:not(.discovered)").forEach(btn => {
+        btn.classList.add("hint-glow");
+      });
+    }, 25000);
+
+    setTimeout(() => {
+      if (!discovered.has("shake")) {
+        showToast("📱 スマホを振ってみて！");
+      }
+    }, 35000);
   }
 
   /* ---------- Discovery tracker ---------- */
 
-  function discover() {
-    discoveredCount++;
-    updateCounter();
-    if (discoveredCount >= totalSecrets && !allFoundShown) {
-      allFoundShown = true;
-      setTimeout(showAllFound, 600);
-    }
-  }
-
   function updateCounter() {
     const counter = document.getElementById("counter");
     const text = document.getElementById("counterText");
+    const bar = document.getElementById("counterBar");
     if (!counter || !text) return;
+
     counter.classList.add("visible");
-    text.textContent = discoveredCount;
+    text.textContent = discovered.size;
+    if (bar) bar.style.width = `${(discovered.size / totalSecrets) * 100}%`;
+  }
+
+  function checkAllFound() {
+    if (discovered.size >= totalSecrets && !allFoundShown) {
+      allFoundShown = true;
+      setTimeout(showAllFound, 800);
+    }
   }
 
   function showAllFound() {
@@ -423,16 +563,24 @@ const App = (() => {
     if (!banner || !overlay) return;
     banner.classList.add("show");
     overlay.classList.add("show");
-    Effects.fireworks(5);
+    vibrate(100);
+    Effects.fireworks(6);
+    setTimeout(() => Effects.confetti(window.innerWidth / 2, window.innerHeight / 3, 100), 500);
   }
 
   function bindAllFoundClose() {
-    document.addEventListener("click", (e) => {
+    document.addEventListener("click", e => {
       if (e.target.id === "afClose") {
         document.getElementById("afBanner")?.classList.remove("show");
         document.getElementById("afOverlay")?.classList.remove("show");
       }
     });
+  }
+
+  /* ---------- Haptic ---------- */
+
+  function vibrate(ms) {
+    try { navigator.vibrate?.(ms); } catch {}
   }
 
   /* ---------- Init ---------- */
@@ -446,7 +594,7 @@ const App = (() => {
     renderLetter(data);
   }
 
-  return { init, decodeHash };
+  return { init };
 })();
 
 document.addEventListener("DOMContentLoaded", App.init);
