@@ -1,4 +1,6 @@
 (() => {
+  "use strict";
+
   const FORTUNES = [
     { img: "assets/images/1.jpg", rank: "大吉", caption: "スマホの背景画像にしてね！" },
     { img: "assets/images/2.jpg", rank: "吉",   caption: "MAX145キロ（仮）" },
@@ -7,7 +9,7 @@
 
   const SECRET_VISIBLE_MS = 5000;
 
-  /* ---- decode ---- */
+  /* ---- base64 decode ---- */
 
   function decode() {
     let h = location.hash.slice(1);
@@ -30,55 +32,58 @@
     return d.innerHTML;
   }
 
-  /* ---- particles ---- */
+  /* ---- CSS-only confetti (no emoji) ---- */
 
-  function spawnConfetti(container) {
-    const colors = ["#c9a87c", "#e8d5b7", "#f0c674", "#e88b72", "#8cc5b2", "#f5a0b8", "#d4a0d4"];
-    const count = 50;
-    for (let i = 0; i < count; i++) {
-      const el = document.createElement("div");
-      el.className = "confetti-piece";
-      const x = (Math.random() * 260 - 130).toFixed(0);
-      const y = (Math.random() * 200 + 120).toFixed(0);
-      const r = (Math.random() * 1080 - 540).toFixed(0);
-      const delay = (Math.random() * 0.3).toFixed(2);
-      const dur = (Math.random() * 0.6 + 0.8).toFixed(2);
+  function burstConfetti(container) {
+    const palette = ["#c9a87c", "#e8d5b7", "#f0c674", "#e88b72",
+                     "#8cc5b2", "#f5a0b8", "#d4a0d4", "#a0c4e8"];
+    const N = 55;
+    const frag = document.createDocumentFragment();
+
+    for (let i = 0; i < N; i++) {
+      const el = document.createElement("span");
+      el.className = "confetti";
+
+      const angle = (Math.PI * 2 * i) / N + (Math.random() - 0.5) * 0.6;
+      const dist  = 80 + Math.random() * 140;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 40;
+      const rot = (Math.random() * 1080 - 540);
+      const dur = 0.7 + Math.random() * 0.5;
+      const delay = Math.random() * 0.15;
+      const w = 4 + Math.random() * 7;
+      const h = 3 + Math.random() * 5;
+
       el.style.cssText =
-        `--x:${x}px;--y:${y}px;--r:${r}deg;` +
-        `animation-delay:${delay}s;animation-duration:${dur}s;` +
-        `left:${(50 + Math.random() * 30 - 15).toFixed(0)}%;` +
-        `background:${colors[Math.floor(Math.random() * colors.length)]};`;
-      if (Math.random() > 0.5) {
-        el.style.borderRadius = "50%";
-        const s = (Math.random() * 6 + 4).toFixed(1);
-        el.style.width = el.style.height = s + "px";
-      } else {
-        el.style.width = (Math.random() * 10 + 5) + "px";
-        el.style.height = (Math.random() * 5 + 3) + "px";
-      }
-      container.appendChild(el);
+        `width:${w}px;height:${h}px;` +
+        `background:${palette[i % palette.length]};` +
+        `--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--rot:${rot.toFixed(0)}deg;` +
+        `animation-duration:${dur.toFixed(2)}s;animation-delay:${delay.toFixed(2)}s;`;
+
+      if (Math.random() > 0.6) el.style.borderRadius = "50%";
+
+      frag.appendChild(el);
     }
+    container.appendChild(frag);
   }
 
-  function spawnSparkles(container) {
-    for (let i = 0; i < 8; i++) {
-      const el = document.createElement("div");
-      el.className = "sparkle";
-      el.textContent = "✦";
-      el.style.cssText =
-        `left:${(Math.random() * 80 + 10).toFixed(0)}%;` +
-        `top:${(Math.random() * 60 + 20).toFixed(0)}%;` +
-        `animation-delay:${(Math.random() * 0.6).toFixed(2)}s;` +
-        `font-size:${(Math.random() * 10 + 10).toFixed(0)}px;`;
-      container.appendChild(el);
+  /* ---- CSS-only sparkle rings (no emoji) ---- */
+
+  function burstRings(container) {
+    for (let i = 0; i < 3; i++) {
+      const ring = document.createElement("span");
+      ring.className = "burst-ring";
+      ring.style.animationDelay = (i * 0.12) + "s";
+      container.appendChild(ring);
     }
   }
 
   /* ---- smooth scroll ---- */
 
-  function smoothScrollTo(el) {
-    const y = el.getBoundingClientRect().top + window.scrollY - 60;
-    window.scrollTo({ top: y, behavior: "smooth" });
+  function scrollIntoViewSmooth(el) {
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
   }
 
   /* ---- render ---- */
@@ -100,42 +105,42 @@
         `<span class="divider-line"></span>`,
       `</div>`,
 
-      `<div class="surprise-box" id="surpriseBox">`,
+      `<div class="surprise-card" id="surpriseCard">`,
 
-        `<div class="omikuji-box" id="omikujiBox">`,
-          `<div class="omikuji-label">おみくじ</div>`,
-          `<div class="omikuji-cylinder" id="omikujiCylinder">`,
-            `<div class="cylinder-body"></div>`,
-            `<div class="omikuji-stick" id="omikujiStick">`,
-              `<div class="stick-shaft"></div>`,
-              `<div class="stick-tip"></div>`,
-            `</div>`,
+        /* omikuji card face */
+        `<div class="omikuji-card" id="omikujiCard">`,
+          `<div class="omikuji-front" id="omikujiFront">`,
+            `<div class="omikuji-top-label">おみくじ</div>`,
+            `<div class="omikuji-question">?</div>`,
+            `<div class="omikuji-sub">tap to reveal</div>`,
+          `</div>`,
+          `<div class="omikuji-result" id="omikujiResult">`,
+            `<div class="result-rank" id="resultRank">${esc(fortune.rank)}</div>`,
           `</div>`,
         `</div>`,
 
-        `<div class="rank-reveal" id="rankReveal">`,
-          `<div class="rank-text" id="rankText">${esc(fortune.rank)}</div>`,
-        `</div>`,
+        `<div class="effects-layer" id="effectsLayer"></div>`,
 
-        `<div class="confetti-layer" id="confettiLayer"></div>`,
-
-        `<div class="photo-area" id="photoArea">`,
+        /* photo + caption */
+        `<div class="reveal-area" id="revealArea">`,
           `<div class="photo-frame" id="photoFrame" style="--tilt:${tilt}deg">`,
             `<img src="${fortune.img}" alt="" loading="eager">`,
           `</div>`,
-          `<div class="photo-caption" id="caption">${esc(fortune.caption)}</div>`,
+          `<p class="photo-caption" id="caption">${esc(fortune.caption)}</p>`,
         `</div>`,
 
+        /* secret message */
         d.secret
-          ? `<div class="secret-box" id="secretBox">` +
+          ? `<div class="secret-section" id="secretSection">` +
+              `<div class="secret-divider"></div>` +
               `<div class="secret-label">secret message</div>` +
               `<div class="secret-content" id="secretContent">` +
-                `<div class="secret-text">${esc(d.secret)}</div>` +
+                `<p class="secret-text">${esc(d.secret)}</p>` +
               `</div>` +
-              `<div class="secret-burned" id="secretBurned">` +
-                `<span class="burned-icon">🔥</span>` +
-                `<span class="burned-text">危険すぎるので消えました</span>` +
-                `<span class="burned-sub">（QRを読み直すとまた見えます）</span>` +
+              `<div class="secret-redacted" id="secretRedacted">` +
+                `<div class="redacted-bar"></div>` +
+                `<p class="redacted-text">この内容は機密につき消去されました</p>` +
+                `<p class="redacted-sub">QRを読み直すとまた見えます</p>` +
               `</div>` +
             `</div>`
           : "",
@@ -148,102 +153,94 @@
     runSequence();
   }
 
-  /* ---- animation sequence ---- */
+  /* ---- animation orchestrator ---- */
 
   function runSequence() {
     const $ = (id) => document.getElementById(id);
 
-    const divider    = $("divider");
-    const box        = $("surpriseBox");
-    const cylinder   = $("omikujiCylinder");
-    const omikujiBox = $("omikujiBox");
-    const stick      = $("omikujiStick");
-    const rankReveal = $("rankReveal");
-    const rankText   = $("rankText");
-    const confLayer  = $("confettiLayer");
-    const photoArea  = $("photoArea");
-    const frame      = $("photoFrame");
-    const caption    = $("caption");
-    const secretBox  = $("secretBox");
+    const divider       = $("divider");
+    const card          = $("surpriseCard");
+    const omikujiCard   = $("omikujiCard");
+    const front         = $("omikujiFront");
+    const result        = $("omikujiResult");
+    const rank          = $("resultRank");
+    const fx            = $("effectsLayer");
+    const revealArea    = $("revealArea");
+    const frame         = $("photoFrame");
+    const caption       = $("caption");
+    const secretSection = $("secretSection");
     const secretContent = $("secretContent");
-    const secretBurned  = $("secretBurned");
+    const secretRedacted = $("secretRedacted");
 
-    let t = 3000;
+    const seq = [];
+    let t = 0;
 
-    // 1 — divider + box slide in
-    at(t, () => {
-      divider.classList.add("visible");
-      box.classList.add("visible");
-      setTimeout(() => smoothScrollTo(box), 300);
+    function after(ms, fn) { t += ms; seq.push({ t, fn }); }
+
+    // 1 - show divider + card
+    after(3000, () => {
+      divider.classList.add("show");
+      card.classList.add("show");
+      scrollIntoViewSmooth(card);
     });
 
-    // 2 — cylinder shakes
-    t += 1200;
-    at(t, () => {
-      cylinder.classList.add("shaking");
+    // 2 - card shakes (like shaking an omikuji box)
+    after(1400, () => {
+      omikujiCard.classList.add("shaking");
     });
 
-    // 3 — stick rises out
-    t += 900;
-    at(t, () => {
-      cylinder.classList.remove("shaking");
-      stick.classList.add("rising");
+    // 3 - card stops shaking, flip to reveal
+    after(1200, () => {
+      omikujiCard.classList.remove("shaking");
+      omikujiCard.classList.add("flipped");
     });
 
-    // 4 — stick flies away, box collapses
-    t += 700;
-    at(t, () => {
-      stick.classList.add("out");
-      setTimeout(() => omikujiBox.classList.add("done"), 300);
+    // 4 - rank stamps in + burst effects
+    after(500, () => {
+      rank.classList.add("stamp");
+      burstRings(fx);
+      fx.classList.add("show");
     });
 
-    // 5 — rank stamps in + sparkles
-    t += 500;
-    at(t, () => {
-      rankReveal.classList.add("visible");
-      rankText.classList.add("stamp");
-      spawnSparkles(confLayer);
-      confLayer.classList.add("visible");
+    // 5 - confetti
+    after(300, () => {
+      burstConfetti(fx);
     });
 
-    // 6 — confetti burst
-    t += 400;
-    at(t, () => {
-      spawnConfetti(confLayer);
-    });
-
-    // 7 — photo slides up
-    t += 800;
-    at(t, () => {
-      photoArea.classList.add("visible");
-      frame.classList.add("pop");
-    });
-
-    // 8 — caption
-    t += 700;
-    at(t, () => {
-      if (caption) caption.classList.add("visible");
-    });
-
-    // 9 — secret message appears
-    t += 1200;
-    at(t, () => {
-      if (!secretBox) return;
-      secretBox.classList.add("visible");
-      smoothScrollTo(secretBox);
-
-      // 10 — secret auto-destructs
+    // 6 - omikuji collapses, photo area appears
+    after(1200, () => {
+      omikujiCard.classList.add("collapse");
       setTimeout(() => {
-        secretContent.classList.add("burning");
+        revealArea.classList.add("show");
+        frame.classList.add("pop");
+        scrollIntoViewSmooth(revealArea);
+      }, 400);
+    });
+
+    // 7 - caption
+    after(1100, () => {
+      if (caption) caption.classList.add("show");
+    });
+
+    // 8 - secret
+    after(1000, () => {
+      if (!secretSection) return;
+      secretSection.classList.add("show");
+      scrollIntoViewSmooth(secretSection);
+
+      // auto-destruct after delay
+      setTimeout(() => {
+        secretContent.classList.add("dissolving");
         setTimeout(() => {
           secretContent.classList.add("gone");
-          secretBurned.classList.add("visible");
-        }, 800);
+          secretRedacted.classList.add("show");
+        }, 700);
       }, SECRET_VISIBLE_MS);
     });
-  }
 
-  function at(ms, fn) { setTimeout(fn, ms); }
+    // run all
+    seq.forEach(({ t: ms, fn }) => setTimeout(fn, ms));
+  }
 
   /* ---- error ---- */
 

@@ -10,13 +10,12 @@
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { font-size: 16px; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
 body {
   font-family: var(--serif);
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   justify-content: center;
@@ -36,7 +35,7 @@ body {
 .letter {
   padding: 64px 0 40px;
   opacity: 0;
-  animation: fadeIn 1.2s ease 0.3s forwards;
+  animation: fadeSlideUp 1s ease 0.3s forwards;
 }
 
 .letter-to {
@@ -77,217 +76,176 @@ body {
   opacity: 0;
   transition: opacity 0.8s ease;
 }
-.divider.visible { opacity: 1; }
+.divider.show { opacity: 1; }
 
 .divider-line { width: 40px; height: 1px; background: var(--accent); opacity: 0.5; }
 .divider-dot  { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0.6; }
 
 /* ================================================================
-   Surprise box (card container)
+   Surprise card (outer container)
    ================================================================ */
 
-.surprise-box {
+.surprise-card {
   background: var(--card);
   border-radius: 16px;
   padding: 36px 24px;
   box-shadow: 0 4px 32px rgba(60, 48, 40, 0.08);
   text-align: center;
-  overflow: visible;
   position: relative;
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(28px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.surprise-box.visible {
+.surprise-card.show {
   opacity: 1;
   transform: translateY(0);
 }
 
 /* ================================================================
-   Omikuji — cylinder + stick
+   Omikuji card — flip animation
    ================================================================ */
 
-.omikuji-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 0 12px;
-  transition: opacity 0.4s ease, max-height 0.5s ease 0.2s;
-  max-height: 200px;
+.omikuji-card {
+  perspective: 800px;
+  margin: 0 auto 20px;
+  max-width: 200px;
+  height: 120px;
+  position: relative;
+  transition: max-height 0.5s ease, opacity 0.4s ease, margin 0.5s ease;
+  overflow: visible;
+}
+.omikuji-card.collapse {
+  max-height: 0;
+  opacity: 0;
+  margin: 0 auto;
   overflow: hidden;
 }
-.omikuji-box.done {
-  opacity: 0;
-  max-height: 0;
-  padding: 0;
+
+.omikuji-card.shaking {
+  animation: cardShake 0.12s ease-in-out infinite;
 }
 
-.omikuji-label {
-  font-family: var(--serif);
-  font-size: 0.8rem;
-  letter-spacing: 0.25em;
-  color: var(--accent);
-  margin-bottom: 14px;
+.omikuji-front,
+.omikuji-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.omikuji-front {
+  background: linear-gradient(145deg, #d4a87c, #c49a6c);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 16px rgba(180, 140, 90, 0.25);
+  transform: rotateY(0deg);
+}
+
+.omikuji-top-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
+  opacity: 0.8;
+  margin-bottom: 4px;
 }
 
-.omikuji-cylinder {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.omikuji-cylinder.shaking {
-  animation: cylinderShake 0.15s ease infinite;
+.omikuji-question {
+  font-size: 2.8rem;
+  font-weight: 300;
+  line-height: 1;
+  animation: questionPulse 2s ease-in-out infinite;
 }
 
-.cylinder-body {
-  width: 52px;
-  height: 64px;
-  background: linear-gradient(135deg, #d4a87c 0%, #b8956a 50%, #d4a87c 100%);
-  border-radius: 6px 6px 2px 2px;
-  border: 1.5px solid #b8956a;
-  position: relative;
-  box-shadow: inset 0 -4px 8px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.1);
+.omikuji-sub {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  opacity: 0.6;
+  margin-top: 6px;
 }
-.cylinder-body::before {
-  content: "";
-  position: absolute;
-  top: -4px; left: -3px; right: -3px;
-  height: 10px;
-  background: linear-gradient(135deg, #e8c9a0, #d4b080);
-  border-radius: 4px 4px 0 0;
-  border: 1.5px solid #b8956a;
-  border-bottom: none;
+
+.omikuji-result {
+  background: var(--card);
+  border: 2px solid var(--accent);
+  box-shadow: 0 4px 20px rgba(180, 140, 90, 0.2);
+  transform: rotateY(180deg);
 }
-.cylinder-body::after {
-  content: "福";
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+
+.omikuji-card.flipped .omikuji-front {
+  transform: rotateY(-180deg);
+}
+.omikuji-card.flipped .omikuji-result {
+  transform: rotateY(0deg);
+}
+
+.result-rank {
   font-family: var(--serif);
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--red);
-  opacity: 0.7;
-}
-
-.omikuji-stick {
-  position: absolute;
-  top: -24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translateY(0);
-  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
-              opacity 0.3s ease;
-  z-index: 2;
-}
-.omikuji-stick.rising {
-  transform: translateY(-36px);
-}
-.omikuji-stick.out {
-  transform: translateY(-80px) rotate(15deg);
-  opacity: 0;
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-              opacity 0.4s ease 0.15s;
-}
-
-.stick-shaft {
-  width: 5px;
-  height: 48px;
-  background: linear-gradient(to right, #f5e6d0, #e8d5b7, #f5e6d0);
-  border-radius: 2px;
-  box-shadow: 1px 0 2px rgba(0,0,0,0.06);
-}
-
-.stick-tip {
-  width: 12px;
-  height: 12px;
-  background: var(--red);
-  border-radius: 50%;
-  margin-top: -1px;
-  box-shadow: 0 2px 6px rgba(192, 57, 43, 0.35);
-}
-
-/* ================================================================
-   Rank reveal
-   ================================================================ */
-
-.rank-reveal {
-  opacity: 0;
-  max-height: 0;
-  overflow: visible;
-  transition: opacity 0.01s, max-height 0.4s ease;
-}
-.rank-reveal.visible {
-  opacity: 1;
-  max-height: 120px;
-  padding: 10px 0 20px;
-}
-
-.rank-text {
-  font-family: var(--serif);
-  font-size: 3.2rem;
+  font-size: 2.6rem;
   font-weight: 900;
   color: var(--red);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   opacity: 0;
-  transform: scale(4) rotate(-10deg);
-  text-shadow: 0 3px 16px rgba(192, 57, 43, 0.25);
+  transform: scale(0);
   will-change: transform, opacity;
 }
-.rank-text.stamp {
-  animation: stampIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-.rank-text.daikichi {
-  font-size: 4rem;
+.result-rank.stamp {
+  animation: stampIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
 }
 
 /* ================================================================
-   Confetti + sparkles
+   Effects layer — confetti + rings (zero emoji)
    ================================================================ */
 
-.confetti-layer {
+.effects-layer {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  inset: 0;
   pointer-events: none;
   overflow: visible;
   opacity: 0;
   z-index: 10;
 }
-.confetti-layer.visible { opacity: 1; }
+.effects-layer.show { opacity: 1; }
 
-.confetti-piece {
+/* confetti pieces: pure CSS shapes */
+.confetti {
   position: absolute;
-  top: 20%;
+  top: 50%;
+  left: 50%;
   opacity: 0;
-  animation: confettiBurst 1s ease-out forwards;
+  animation: confettiShoot 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
   will-change: transform, opacity;
 }
 
-.sparkle {
+/* expanding ring burst */
+.burst-ring {
   position: absolute;
-  color: #f0c674;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
   opacity: 0;
-  animation: sparkleFlash 0.8s ease-out forwards;
-  pointer-events: none;
-  z-index: 11;
+  animation: ringExpand 0.7s cubic-bezier(0, 0.5, 0.3, 1) forwards;
 }
 
 /* ================================================================
    Photo
    ================================================================ */
 
-.photo-area {
+.reveal-area {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(24px);
   transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.photo-area.visible {
+.reveal-area.show {
   opacity: 1;
   transform: translateY(0);
 }
@@ -298,7 +256,8 @@ body {
   padding: 8px 8px 32px;
   box-shadow: 0 6px 28px rgba(0, 0, 0, 0.12);
   opacity: 0;
-  transform: scale(0) rotate(-10deg);
+  transform: scale(0.3) rotate(-8deg);
+  will-change: transform, opacity;
 }
 .photo-frame.pop {
   animation: photoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -315,54 +274,59 @@ body {
 .photo-caption {
   font-family: var(--cursive);
   font-size: 1.2rem;
-  font-weight: 400;
   color: var(--text);
   margin-top: 18px;
   letter-spacing: 0.04em;
   line-height: 1.6;
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  transition: opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s;
 }
-.photo-caption.visible {
+.photo-caption.show {
   opacity: 1;
   transform: translateY(0);
 }
 
 /* ================================================================
-   Secret message — appears then self-destructs
+   Secret message — auto-destruct
    ================================================================ */
 
-.secret-box {
+.secret-section {
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid rgba(201, 168, 124, 0.2);
   opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 1s ease, transform 1s ease;
+  transform: translateY(14px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
-.secret-box.visible {
+.secret-section.show {
   opacity: 1;
   transform: translateY(0);
 }
 
+.secret-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.3;
+  margin: 0 auto 20px;
+}
+
 .secret-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .secret-content {
-  position: relative;
   transition: opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease;
 }
-.secret-content.burning {
+.secret-content.dissolving {
   opacity: 0;
-  filter: blur(8px) brightness(1.5);
-  transform: scale(0.95);
+  filter: blur(6px);
+  transform: scale(0.97);
 }
 .secret-content.gone {
   display: none;
@@ -376,34 +340,38 @@ body {
   white-space: pre-line;
 }
 
-.secret-burned {
+/* redacted state (CSS only, no emoji) */
+.secret-redacted {
   display: none;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 8px 0;
+  gap: 8px;
+  padding: 4px 0;
 }
-.secret-burned.visible {
+.secret-redacted.show {
   display: flex;
-  animation: fadeIn 0.6s ease forwards;
+  animation: fadeSlideUp 0.5s ease forwards;
 }
 
-.burned-icon {
-  font-size: 1.8rem;
-  animation: burnFlicker 1.5s ease-in-out infinite;
+.redacted-bar {
+  width: 32px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.5;
 }
 
-.burned-text {
+.redacted-text {
   font-family: var(--cursive);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-light);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
-.burned-sub {
-  font-size: 0.7rem;
+.redacted-sub {
+  font-size: 0.68rem;
   color: var(--accent);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* ================================================================
@@ -417,7 +385,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 80vh;
+  min-height: 80dvh;
   text-align: center;
 }
 .error-text {
@@ -430,65 +398,53 @@ body {
    Keyframes
    ================================================================ */
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes cylinderShake {
-  0%, 100% { transform: rotate(0); }
-  25%  { transform: rotate(-3deg) translateX(-2px); }
-  75%  { transform: rotate(3deg) translateX(2px); }
+@keyframes questionPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes cardShake {
+  0%   { transform: translateX(0) rotate(0); }
+  25%  { transform: translateX(-3px) rotate(-1.5deg); }
+  50%  { transform: translateX(0) rotate(0); }
+  75%  { transform: translateX(3px) rotate(1.5deg); }
+  100% { transform: translateX(0) rotate(0); }
 }
 
 @keyframes stampIn {
-  0%   { opacity: 0; transform: scale(4) rotate(-10deg); }
-  40%  { opacity: 1; transform: scale(0.85) rotate(3deg); }
-  60%  { transform: scale(1.08) rotate(-1.5deg); }
-  80%  { transform: scale(0.97) rotate(0.5deg); }
+  0%   { opacity: 0; transform: scale(3.5) rotate(-8deg); }
+  45%  { opacity: 1; transform: scale(0.88) rotate(2deg); }
+  65%  { transform: scale(1.06) rotate(-1deg); }
+  82%  { transform: scale(0.97) rotate(0.3deg); }
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
-@keyframes photoPop {
-  0%   { opacity: 0; transform: scale(0) rotate(-12deg); }
-  50%  { opacity: 1; transform: scale(1.1) rotate(var(--tilt, 3deg)); }
-  70%  { transform: scale(0.95) rotate(var(--tilt, 3deg)); }
-  85%  { transform: scale(1.02) rotate(var(--tilt, 3deg)); }
-  100% { opacity: 1; transform: scale(1) rotate(var(--tilt, 3deg)); }
+@keyframes ringExpand {
+  0%   { width: 0; height: 0; opacity: 0.6; border-width: 3px; }
+  100% { width: 200px; height: 200px; opacity: 0; border-width: 1px; }
 }
 
-@keyframes confettiBurst {
+@keyframes confettiShoot {
   0% {
     opacity: 1;
-    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+    transform: translate(0, 0) rotate(0deg) scale(1);
   }
-  70% { opacity: 1; }
+  60% { opacity: 1; }
   100% {
     opacity: 0;
-    transform: translateY(var(--y, 150px)) translateX(var(--x, 20px)) rotate(var(--r, 360deg)) scale(0.4);
+    transform: translate(var(--dx, 60px), var(--dy, 80px)) rotate(var(--rot, 360deg)) scale(0.3);
   }
 }
 
-@keyframes sparkleFlash {
-  0%   { opacity: 0; transform: scale(0) rotate(0deg); }
-  40%  { opacity: 1; transform: scale(1.2) rotate(90deg); }
-  100% { opacity: 0; transform: scale(0.5) rotate(180deg); }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%  { transform: translateX(-6px) rotate(-1.5deg); }
-  20%  { transform: translateX(6px) rotate(1.5deg); }
-  30%  { transform: translateX(-5px) rotate(-1deg); }
-  40%  { transform: translateX(5px) rotate(1deg); }
-  50%  { transform: translateX(-4px) rotate(-0.5deg); }
-  60%  { transform: translateX(4px) rotate(0.5deg); }
-  70%  { transform: translateX(-2px); }
-  80%  { transform: translateX(2px); }
-  90%  { transform: translateX(-1px); }
-}
-
-@keyframes burnFlicker {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50%      { transform: scale(1.1) rotate(5deg); opacity: 1; }
+@keyframes photoPop {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-8deg); }
+  55%  { opacity: 1; transform: scale(1.08) rotate(var(--tilt, 2deg)); }
+  75%  { transform: scale(0.96) rotate(var(--tilt, 2deg)); }
+  90%  { transform: scale(1.01) rotate(var(--tilt, 2deg)); }
+  100% { opacity: 1; transform: scale(1) rotate(var(--tilt, 2deg)); }
 }
